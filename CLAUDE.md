@@ -12,7 +12,10 @@ hedefli, **1–8 oyunculu online co-op** hedefleniyor (mimari host-authoritative
   Eski Input Manager API'leri (`Input.GetKey` vb.) **kullanılmaz**.
 - UI: Unity'nin yerleşik UGUI'si (`Canvas`/`Text`/`Button`/`Image`). TextMeshPro veya başka bir
   UI paketi **eklenmedi**.
-- Tek sahne: `Assets/_Project/Scenes/WorkshopPrototype.unity`.
+- **Netcode for GameObjects (2.13.3)** + **Unity Transport (2.7.4)** — multiplayer teknik
+  prototipi için eklendi (bkz. Multiplayer Hedefi).
+- Sahneler: `Assets/_Project/Scenes/WorkshopPrototype.unity` (asıl tek oyunculu oyun sahnesi)
+  ve `Assets/_Project/Scenes/MultiplayerPrototype.unity` (ayrı, minimal multiplayer test sahnesi).
 
 ## Mevcut Kod Mimarisi
 Tüm oyun kodu `Assets/_Project/Scripts/` altında, namespace'e göre klasörlenmiş:
@@ -22,12 +25,13 @@ Tüm oyun kodu `Assets/_Project/Scripts/` altında, namespace'e göre klasörlen
 | `Core/Interaction` | `IInteractable`, `IInteractor` — tüm etkileşim sisteminin temel sözleşmesi |
 | `Player` | `FirstPersonController` (hareket/bakış/imleç), `PlayerInteractor` (raycast, E/G/sol-tık) |
 | `Items` | `CarryableItem`, `ItemDefinition`, `RecipeDefinition` |
-| `Machines` | `MachineController`, `MachineState` (kesim makinesi, tek yetkili üretim durumu) |
+| `Machines` | `MachineController`, `MachineState`, `MachineDefinition`, `MachinePurchaseManager`, `MachineShopTerminal` (üretim + satın alma/yerleştirme, tek yetkili durum) |
 | `Conveyors` | `ConveyorSegment`, `IConveyorReceiver`, `RawMaterialFeeder`, `OutputStorage` |
 | `Orders` | `OrderManager`, `OrderDefinition`, `OrderState`, `PackingStation`, `ShippingZone`, `ShipmentPackage` |
 | `Economy` | `EconomyManager` |
-| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD`, `OrderBoardPanelUI` |
-| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`) |
+| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD`, `OrderBoardPanelUI`, `MachineShopPanelUI` |
+| `Multiplayer` | `NetworkPlayerSetup`, `MultiplayerConnectionUI` — yalnızca `MultiplayerPrototype.unity` sahnesinde kullanılır, tek oyunculu sistemlerden bağımsız |
+| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup`, `ShiftworksMachineShopSetup`, `ShiftworksMultiplayerPrototypeSetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`) |
 
 **Tasarım ilkeleri (tüm sistemlerde tutarlı şekilde uygulanıyor):**
 - Her sistemin durumu **tek bir yetkili kaynaktan** yönetilir (`MachineController.State`,
@@ -50,10 +54,17 @@ Tüm oyun kodu `Assets/_Project/Scripts/` altında, namespace'e göre klasörlen
 - Gereksiz yeni sistem/paket eklenmez; var olan mantık kopyalanmaz, genişletilir.
 
 ## Multiplayer Hedefi
-Uzun vadede **host-authoritative** 1–8 oyunculu co-op. Henüz Netcode/RPC kodu yok — ama her
-sistem bu geçişi kolaylaştıracak şekilde tasarlandı (tek yetkili durum, atomik işlemler).
-Aşama 6 civarında küçük bir **iki oyunculu teknik ağ prototipi** planlanıyor (bkz.
-`docs/ROADMAP.md`), böylece ağ mimarisi çok geç doğrulanmış olmaz.
+Uzun vadede **host-authoritative** 1–8 oyunculu co-op. Oyunun asıl sistemlerinde (üretim,
+ekonomi, envanter vb.) henüz gerçek Netcode/RPC entegrasyonu yok — ama her sistem bu geçişi
+kolaylaştıracak şekilde tasarlandı (tek yetkili durum, atomik işlemler).
+
+Aşama 6 civarında planlanan küçük **iki oyunculu teknik ağ prototipi tamamlandı ve başarıyla
+test edildi** (Netcode for GameObjects + Unity Transport, ayrı `MultiplayerPrototype.unity`
+sahnesinde). **Bu, oyunun bütün sistemlerinin multiplayer olduğu anlamına gelmez** — sadece
+oyuncu hareketi/kamerası (owner-authoritative `NetworkTransform`) senkronize edildi; eşya
+taşıma, üretim, sipariş, ekonomi ve makine yerleştirme hâlâ tamamen yerel/tek-oyunculu. Gerçek
+host-authoritative entegrasyon (sunucunun her işlemi doğrulaması) Aşama 18'de ele alınacak.
+Ayrıntılar için `docs/PROJECT_STATUS.md`.
 
 ## Proje Belgeleri — Her Yeni Oturumda Okunmalı
 1. **Bu dosya (`CLAUDE.md`)** — genel bağlam.

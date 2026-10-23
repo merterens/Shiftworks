@@ -35,6 +35,7 @@ namespace Shiftworks.Player
 
         private CharacterController _characterController;
         private FirstPersonController _firstPersonController;
+        private MachinePlacementController _machinePlacementController;
         private IInteractable _currentTarget;
         private CarryableItem _carriedItem;
 
@@ -42,6 +43,7 @@ namespace Shiftworks.Player
         {
             _characterController = GetComponent<CharacterController>();
             _firstPersonController = GetComponent<FirstPersonController>();
+            _machinePlacementController = GetComponent<MachinePlacementController>();
         }
 
         private void Update()
@@ -155,6 +157,12 @@ namespace Shiftworks.Player
                 return;
             }
 
+            if (_currentTarget is MachineShopTerminal terminal)
+            {
+                HandleShopTerminalInteraction(terminal);
+                return;
+            }
+
             if (_currentTarget is PackingStation station)
             {
                 HandlePackingInteraction(station);
@@ -216,6 +224,18 @@ namespace Shiftworks.Player
         {
             SuspendForUI();
             board.OpenPanel(ResumeFromUI);
+        }
+
+        private void HandleShopTerminalInteraction(MachineShopTerminal terminal)
+        {
+            SuspendForUI();
+            terminal.OpenPanel(ResumeFromUI, () =>
+            {
+                if (_machinePlacementController != null)
+                {
+                    _machinePlacementController.BeginPlacement(terminal.Definition, terminal.PurchaseManager);
+                }
+            });
         }
 
         private void HandlePackingInteraction(PackingStation station)
@@ -281,6 +301,28 @@ namespace Shiftworks.Player
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+        }
+
+        /// <summary>
+        /// Called by MachinePlacementController. Unlike SuspendForUI/ResumeFromUI, this never
+        /// touches the cursor or FirstPersonController.IsInputSuspended — movement/look stay
+        /// fully active so the player can walk around while placing. Only this script's own
+        /// E/G/left-click handling is suspended, and FirstPersonController's Escape/click
+        /// cursor-toggle is suppressed so it can't fight MachinePlacementController's own use
+        /// of those same inputs (cancel / confirm).
+        /// </summary>
+        public void SetPlacementModeActive(bool active)
+        {
+            IsInputSuspended = active;
+            if (_firstPersonController != null)
+            {
+                _firstPersonController.SuppressCursorToggle = active;
+            }
+
+            if (active)
+            {
+                ClearTarget();
+            }
         }
 
         // Local-only for now. This indirection is the seam where a future host RPC call

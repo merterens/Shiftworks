@@ -34,6 +34,15 @@ namespace Shiftworks.Player
         /// </summary>
         public bool IsInputSuspended { get; set; }
 
+        /// <summary>
+        /// Set by PlayerInteractor during machine placement mode. Movement/look stay fully
+        /// active (the player can walk around to find a spot) but Escape/click must NOT
+        /// toggle the cursor lock here, since MachinePlacementController owns Escape (cancel)
+        /// and left-click (confirm) for the duration — without this, HandleCursorToggle would
+        /// also react to the same Escape press and unlock the cursor after placement ends.
+        /// </summary>
+        public bool SuppressCursorToggle { get; set; }
+
         private CharacterController _controller;
         private PlayerInputActions _input;
         private Vector3 _velocity;
@@ -68,7 +77,10 @@ namespace Shiftworks.Player
                 return;
             }
 
-            HandleCursorToggle();
+            if (!SuppressCursorToggle)
+            {
+                HandleCursorToggle();
+            }
 
             if (Cursor.lockState != CursorLockMode.Locked)
             {

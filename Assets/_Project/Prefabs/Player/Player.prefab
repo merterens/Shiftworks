@@ -297,6 +297,7 @@ GameObject:
   - component: {fileID: 8054647891577676318}
   - component: {fileID: 484640696619612566}
   - component: {fileID: 5631270459408496484}
+  - component: {fileID: 2014305577909034144}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -383,6 +384,23 @@ MonoBehaviour:
   promptUI: {fileID: 3894965421727982498}
   interactionDistance: 3
   throwForce: 8
+--- !u!114 &2014305577909034144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4874748468761580265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82d8751c38ec20e40b16ef013a31eacd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Shiftworks.Player.MachinePlacementController
+  cameraTransform: {fileID: 4033263168229390889}
+  promptUI: {fileID: 3894965421727982498}
+  maxPlacementDistance: 6
+  validPreviewMaterial: {fileID: 2100000, guid: c441553332bb7ef4a9b47e4d19e97afb, type: 2}
+  invalidPreviewMaterial: {fileID: 2100000, guid: c63a5ca314e32ff4c9b68e4edc9240b1, type: 2}
 --- !u!1 &7803599095204001651
 GameObject:
   m_ObjectHideFlags: 0
