@@ -131,11 +131,15 @@ MonoBehaviour:
   recipe: {fileID: 11400000, guid: efad8c87d071a5245a56ba316dbb92d6, type: 2}
   outputSpawnPoint: {fileID: 7878237802747476625}
   outputReceiverBehaviour: {fileID: 0}
+  powerDemandKw: 4
+  powerManager: {fileID: 0}
+  statsTracker: {fileID: 0}
   statusIndicatorRenderer: {fileID: 6123611932789188498}
   animatedPart: {fileID: 2433987671123096569}
   idleColor: {r: 1, g: 0, b: 0, a: 1}
   processingColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   outputReadyColor: {r: 0, g: 1, b: 0, a: 1}
+  insufficientPowerColor: {r: 0.6, g: 0.1, b: 0.8, a: 1}
   animationAmplitude: 0.05
   animationSpeed: 6
 --- !u!1 &3167819066594520159

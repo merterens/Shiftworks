@@ -11,6 +11,14 @@ namespace Shiftworks.UI
     /// Player); this component only owns the panel's own visibility and button wiring, not
     /// cursor state — that stays PlayerInteractor's responsibility so there is exactly one
     /// place deciding when the player can look/move.
+    ///
+    /// (Stage 9 fix) OrderManager only ever allows one Active/ReadyToShip order at a time
+    /// (HasActiveOrder), but this board previously only checked ITS OWN order's state
+    /// (Available) to decide whether Accept was clickable — with a second order board now in
+    /// the scene, clicking Accept while a DIFFERENT order was already active silently did
+    /// nothing (TryAcceptOrder correctly refused, but nothing on screen said why). The button
+    /// and a dedicated warning line now also read HasActiveOrder, so this is visible instead
+    /// of a silent dead end.
     /// </summary>
     public class OrderBoardPanelUI : MonoBehaviour
     {
@@ -20,6 +28,7 @@ namespace Shiftworks.UI
         [SerializeField] private Text quantityText;
         [SerializeField] private Text rewardText;
         [SerializeField] private Text stateText;
+        [SerializeField] private Text warningText;
         [SerializeField] private Button acceptButton;
         [SerializeField] private Button closeButton;
 
@@ -58,6 +67,11 @@ namespace Shiftworks.UI
                 panelRoot.SetActive(true);
             }
 
+            if (warningText != null)
+            {
+                warningText.enabled = false;
+            }
+
             Refresh();
         }
 
@@ -93,9 +107,20 @@ namespace Shiftworks.UI
 
         private void OnAcceptClicked()
         {
-            if (_orderManager != null && _order != null)
+            if (_orderManager == null || _order == null)
             {
-                _orderManager.TryAcceptOrder(_order);
+                return;
+            }
+
+            bool success = _orderManager.TryAcceptOrder(_order);
+            if (!success && warningText != null)
+            {
+                // Defensive: Refresh()'s own HasActiveOrder check already disables the button
+                // for this exact case, so a click normally can't reach here — but if it ever
+                // does (e.g. a stale interactable state), the player still sees why nothing
+                // happened instead of a silent no-op.
+                warningText.enabled = true;
+                warningText.text = "Sipariş kabul edilemedi — başka bir sipariş zaten aktif olabilir.";
             }
 
             Refresh();
@@ -109,6 +134,7 @@ namespace Shiftworks.UI
             }
 
             OrderState state = _orderManager.GetState(_order);
+            bool blockedByOtherActiveOrder = state == OrderState.Available && _orderManager.HasActiveOrder;
 
             if (orderNameText != null) orderNameText.text = _order.OrderName;
             if (itemText != null) itemText.text = _order.RequestedItem != null ? _order.RequestedItem.DisplayName : "-";
@@ -129,7 +155,23 @@ namespace Shiftworks.UI
 
             if (acceptButton != null)
             {
-                acceptButton.interactable = state == OrderState.Available;
+                // Available is necessary but not sufficient: OrderManager only ever allows
+                // one Active/ReadyToShip order factory-wide (HasActiveOrder), so this board's
+                // own Accept must stay disabled while a DIFFERENT order already holds that slot.
+                acceptButton.interactable = state == OrderState.Available && !_orderManager.HasActiveOrder;
+            }
+
+            if (warningText != null)
+            {
+                if (blockedByOtherActiveOrder)
+                {
+                    warningText.enabled = true;
+                    warningText.text = "Başka bir sipariş zaten aktif — önce onu tamamlayıp teslim edin.";
+                }
+                else
+                {
+                    warningText.enabled = false;
+                }
             }
         }
     }

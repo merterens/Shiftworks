@@ -12,9 +12,9 @@ tamamlandığında `docs/PROJECT_STATUS.md` güncellenmelidir.
 | 5 | Sipariş, ekonomi, paketleme ve teslimat | ✅ Tamamlandı |
 | 6 | Makine satın alma ve yerleştirme | ✅ Tamamlandı |
 | 7 | Fabrika genişletme — hazır üretim alanı satın alma ("Üretim Alanı B") | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
-| 8 | Yeni ürünler ve çok aşamalı üretim zincirleri | Planlandı |
-| 9 | Makine yükseltmeleri (hız/kalite/kapasite seviyeleri) | Planlandı |
-| 10 | Elektrik sistemi ve üretim verimliliği | Planlandı |
+| 8 | Elektrik kapasitesi, makine güç tüketimi ve üretim verimliliği | ✅ Tamamlandı (18/18 kullanıcı testi) |
+| 9 | Yeni ürünler, makineler ve çok aşamalı üretim (montaj makinesi, AssembledComponent) | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
+| 10 | Makine yükseltmeleri (hız/kalite/kapasite seviyeleri) | Planlandı |
 | 11 | Konveyör inşa modu (oyuncunun serbestçe hat kurması) | Planlandı |
 | 12 | Forklift ve lojistik (araçla taşıma, toplu nakliye) | Planlandı |
 | 13 | Gece-gündüz döngüsü ve vardiya sistemi | Planlandı |
@@ -53,3 +53,17 @@ sistemleriyle (ekonomi/üretim/envanter) birlikte ele alınacak.
   Üretim Alanı C/D gibi yeni salonların yalnızca yeni bir veri asset'i + sahne kurulumu
   olarak eklenmesine izin verecek şekilde tasarlandı; kod tekrar yazılmadan genişletilebilir.
   Ayrıntılar için `docs/PROJECT_STATUS.md`.
+- Aşama 8, bu belgenin orijinal sırasında 10. sıradaydı ("Elektrik sistemi ve üretim
+  verimliliği"); kullanıcı bunu doğrudan "Aşama 8" olarak talep etti, bu yüzden eski 8 ve 9
+  ("Yeni ürünler..." / "Makine yükseltmeleri...") bir basamak kaydırıldı — tam olarak bu
+  belgenin kendi öngördüğü türden küçük bir sıralama kayması. Jeneratör yakıtı, elektrik
+  kabloları/direkleri, elektrik kesintisi olayları, bataryalar, güneş panelleri ve
+  multiplayer elektrik senkronizasyonu **bilinçli olarak kapsam dışı** bırakıldı (kullanıcının
+  isteğiyle); gelecekteki bir aşamada değerlendirilebilir. Aşama 8, kullanıcı tarafından
+  18/18 testle onaylandı. Ayrıntılar için `docs/PROJECT_STATUS.md`.
+- Aşama 9 ("Yeni ürünler, makineler ve çok aşamalı üretim") kullanıcı tarafından doğrudan bu
+  sırayla talep edildi; eski 9 ("Makine yükseltmeleri") bir basamak daha kaydırılıp 10 oldu.
+  Yeni ham madde satın alma ekonomisi, serbest konveyör inşaatı, çoklu aktif sipariş,
+  kayıt/yükleme, makine arızaları/bakım, elektrik faturası, yeni fabrika genişleme alanları,
+  Steam entegrasyonu ve multiplayer üretim senkronizasyonu **bilinçli olarak kapsam dışı**
+  bırakıldı. Ayrıntılar için `docs/PROJECT_STATUS.md`.

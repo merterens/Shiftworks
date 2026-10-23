@@ -1,7 +1,19 @@
 # Shiftworks — Proje Durumu
 
 _Son güncelleme: Aşama 1–6 tamamlandı ve test edildi. Aşama 7 (hazır üretim alanı satın alma —
-"Üretim Alanı B") **geliştirildi, kullanıcı oynanış testleri bekleniyor.**_
+"Üretim Alanı B") **geliştirildi, kullanıcı oynanış testleri bekleniyor.** Aşama 8 (elektrik
+kapasitesi, makine güç tüketimi ve üretim verimliliği) **✅ tamamlandı — kullanıcı tarafından
+18/18 testle onaylandı.** Aşama 9 (yeni ürünler, montaj makinesi, çok aşamalı üretim)
+**geliştirildi — kullanıcı testleri bekleniyor.** Aşama 9 testi sırasında bulunan iki sorun
+düzeltildi: sipariş-kabul geri bildirimi eksikliği ("Aşama 9 Teslimat Hatası Düzeltmesi") ve
+ikinci üretimde yanıltıcı "Çıktı Hazır" metni ("Aşama 9 İkinci Üretim Takılması Düzeltmesi").
+Montaj makinesi akışı tekrar incelendi — **gerçek bir hata bulunamadı**, önceki metin
+düzeltmesi doğru çalışıyor. Editor-only F8 test parası özelliği (`DevelopmentCheats`) eklendi.
+Kullanıcı metin düzeltmesine rağmen aynı noktada takılmaya devam ettiğini bildirdiği için
+`PlayerInteractor.HandleMachineInteraction`'da **gerçek bir davranış değişikliği** yapıldı:
+Çıktı Hazır durumundaki bir makineye E'ye basıldığında elde bir şey varsa artık otomatik
+bırakılıp aynı tuş basışında çıktı alınıyor (bkz. "Aşama 9 — E Tuşu Otomatik Bırakma").
+**Kullanıcı henüz bunların hiçbirini test etmedi.**_
 
 ⚠️ **Düzeltme**: Bu dosya daha önce iki oyunculu multiplayer teknik prototipinin "kullanıcı
 tarafından başarıyla test edildiğini" söylüyordu. Bu **yanlıştı** — kullanıcı, test ekranında
@@ -21,10 +33,13 @@ neden araştırması ve adım adım test talimatı aşağıda, "Multiplayer Test
 | 6 | Makine satın alma ve yerleştirme | ✅ Tamamlandı (8/8 test, yerleştirme zemin-çakışma hatası düzeltildi) |
 | — | İki oyunculu multiplayer teknik prototipi (Aşama 6 civarı, erken doğrulama) | 🛠️ **Geliştirildi — kullanıcı testi bekleniyor (düzeltme: önceki "başarılı" kaydı yanlıştı)** |
 | 7 | Fabrika genişletme — hazır üretim alanı satın alma ("Üretim Alanı B") | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
+| 8 | Elektrik kapasitesi, makine güç tüketimi ve üretim verimliliği | ✅ **Tamamlandı (18/18 kullanıcı testi)** |
+| 9 | Yeni ürünler, makineler ve çok aşamalı üretim (montaj makinesi) | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
 
 Kullanıcı tarafından onaylanan test sonuçları: Aşama 1 (7/7), Aşama 2 (4/4 + hız/kaybolma hata
 düzeltmesi), Aşama 3 (11/11), Aşama 4 (11/11), Aşama 5 (ilk uygulama + 9/9 hata düzeltme testi),
-Aşama 6 (8/8, yerleştirme zemin-çakışma hata düzeltmesi dahil). **Multiplayer teknik prototipi
+Aşama 6 (8/8, yerleştirme zemin-çakışma hata düzeltmesi dahil), **Aşama 8 (18/18 — elektrik
+kapasitesi, güç tahsisi, yükseltme, üretim istatistikleri)**. **Multiplayer teknik prototipi
 henüz kullanıcı tarafından test edilemedi** (bkz. düzeltme notu yukarıda ve "Multiplayer Test
 Talimatları" bölümü) — bir `NetworkManager` transport-bağlama hatası Aşama 6 civarında bulunup
 düzeltilmişti, ama bu kod/sahne seviyesinde bir düzeltmeydi; iki oyuncunun gerçekten bağlanıp
@@ -40,7 +55,36 @@ entegrasyonu Aşama 18'e aittir.
 
 ## Yeni Oturum İçin Devam Notları
 
-**0. En son geliştirme (bu oturum — multiplayer test menüsü/durum düzeltmesi)**: Kullanıcı,
+**000. En son geliştirme (bu oturum — Aşama 9: Yeni Ürünler, Montaj Makinesi, Çok Aşamalı
+Üretim)**: Aşama 8, kullanıcı tarafından **18/18 testle onaylandı** (✅ tamamlandı). Mimari
+inceleme sonucu çok önemli bir bulgu: `OrderManager`, `PackingStation`, `ShippingZone`,
+`ShipmentPackage`, `ConveyorSegment` **zaten tamamen veri-odaklı ve çoklu ürün/sipariş türünü
+destekliyordu** — sıfır kod değişikliği gerekti. Tek gerçek genelleme:
+`MachineController.TryAcceptInput`'in artık `recipe.InputCount`'u (önceden var ama hiç
+okunmayan bir alan) gerçekten kullanması — N girdili bir tarifte ilk N-1 parça güç kontrolü
+olmadan arabelleğe alınıyor, sadece partiyi TAMAMLAYAN son parça güç için atomik kontrolden
+geçiyor (1 girdili tariflerde bu her zaman ilk parçada olduğu için **kesim makinesinin
+davranışı piksel piksel aynı** kaldı). Yeni `AssembledComponent` ürünü (2×CutMetalPart →
+1×AssembledComponent, 8 sn), yeni `AssemblyMachine` (450 $, 5 kW, aynı `MachineController`
+sınıfı — ikinci bir üretim sistemi yazılmadı), ikinci bir `OrderBoard` ("Montaj Parçası
+Siparişi", 2×AssembledComponent, 350$) ve ikinci bir `MachineShopTerminal` (mevcut
+`MachinePurchaseManager`'ı paylaşıyor) eklendi. `ShiftworksAssemblyProductionSetup.cs`
+(Editor, menü 22-25). **Henüz Unity Editor'de açılıp menüler çalıştırılmadı / Play Mode'da
+test edilmedi.** Ayrıntı için "Aşama 9 Mimarisi" ve "Aşama 9 Test Talimatları" bölümlerine
+bakın.
+
+**00. Önceki oturum (Aşama 8: Elektrik ve Üretim Verimliliği, ✅ 18/18 ile onaylandı)**: Yeni
+`Shiftworks.Power` namespace'i: `IPowerConsumer` (arayüz), `PowerManager` (tek yetkili
+kapasite/tahsis durumu), `ProductionStatsTracker` (fabrika geneli toplam üretim sayacı),
+`PowerPanelTerminal` + yeni `PowerPanelUI` (elektrik panosu). `MachineController` ve
+`ConveyorSegment` güç farkındalığı kazandı (ayrıntı için "Önemli Scriptler" bölümüne bakın).
+`ShiftworksPowerSetup.cs` (Editor, menü 20-21) sahnedeki 1 makineyi (4 kW) ve 3 konveyörü
+(0,5 kW her biri) `PowerManager`'a bağlıyor, elektrik panosunu ekliyor. Başlangıç kapasitesi
+**10 kW** (spec değeri) **değiştirilmedi** — mevcut hattın tepe tüketimi (1 makine aynı anda
+işlerken + 3 konveyör sürekli) en fazla 4 + 3×0,5 = **5,5 kW**, 10 kW'ın rahatça altında,
+doğrulandı.
+
+**0. Daha önceki oturum (multiplayer test menüsü/durum düzeltmesi)**: Kullanıcı,
 multiplayer prototipinin önceki oturumda "başarıyla test edildi" olarak kaydedilmesinin
 **yanlış** olduğunu bildirdi — test ekranında Host/Client seçeneklerini göremedi. İnceleme
 (`MultiplayerPrototype.unity`, `NetworkManager`/`UnityTransport` yapılandırması,
@@ -85,10 +129,11 @@ multiplayer prototipi NGO'nun "pre-release" işaretli bir sürümünü kullanıy
 aynı noktada spawn oluyor; **(Aşama 7, yeni)** kilitli bariyerdeki 3D etiketin (`TextMesh`)
 tam yüzü hangi yöne baktığı Editor'de gözle doğrulanmadı.
 
-**4. Sıradaki görev**: Kullanıcı önce multiplayer test talimatlarını (bkz. aşağıdaki
-"Multiplayer Test Talimatları" bölümü) uygulayıp iki oyunculu bağlantıyı gerçekten test edecek,
-sonra Aşama 7'yi Unity Editor'de test edecek (menüler + Play Mode). Onay sonrası Aşama 8 (yeni
-ürünler ve çok aşamalı üretim zincirleri) planlanacak.
+**4. Sıradaki görev**: Kullanıcı sırayla: (a) multiplayer test talimatlarını uygulayıp iki
+oyunculu bağlantıyı gerçekten test edecek, (b) Aşama 7'yi Unity Editor'de test edecek (menüler
+18-19 + Play Mode), (c) Aşama 9'u test edecek (menüler 22-25 + Play Mode, bkz. "Aşama 9 Test
+Talimatları" bölümü) — Aşama 8 zaten 18/18 ile onaylandı. Onay sonrası Aşama 10 (makine
+yükseltmeleri) planlanacak.
 
 **5. Yeni oturumda okunması gereken dosyalar**: `CLAUDE.md`, `docs/PROJECT_STATUS.md` (bu dosya),
 `docs/ROADMAP.md`.
@@ -105,11 +150,48 @@ sonra Aşama 7'yi Unity Editor'de test edecek (menüler + Play Mode). Onay sonra
   `Apply Factory Expansion System (Data + Scene)`) menüleri — bunlar çalıştırılmadan
   `ProductionAreaB.asset`, ikinci salon ve sahnedeki yeni objeler **oluşmaz**.
 
-**7. Bu oturumda değişen dosya (multiplayer düzeltmesi)**:
+**7. Önceki oturumda değişen dosya (multiplayer düzeltmesi)**:
 `Assets/_Project/Scripts/Multiplayer/MultiplayerConnectionUI.cs` (durum metni/geçici mesaj
 mantığı güçlendirildi). `MultiplayerPrototype.unity` sahne dosyasına **hiç dokunulmadı** —
 inceleme sonucu sahnede bir hata bulunmadı, bu yüzden sahne/prefab/Editor aracı
 (`ShiftworksMultiplayerPrototypeSetup.cs`) değiştirilmedi.
+
+**8. Aşama 8'de değişen/eklenen dosyalar** (bir sonraki oturumda hızlı başvuru için):
+- Yeni: `Assets/_Project/Scripts/Power/IPowerConsumer.cs`, `PowerManager.cs`,
+  `ProductionStatsTracker.cs`, `PowerPanelTerminal.cs`,
+  `Assets/_Project/Scripts/UI/PowerPanelUI.cs`,
+  `Assets/_Project/Scripts/Editor/ShiftworksPowerSetup.cs`.
+- Değiştirilen: `Assets/_Project/Scripts/Machines/MachineController.cs` (güç isteme/serbest
+  bırakma `TryAcceptInput`/`CompleteProcessing` içine atomik olarak eklendi; `powerDemandKw`,
+  `HasPower`, `CompletedCount`, `TotalProcessingSeconds`, `TotalPowerWaitSeconds` yeni alanlar),
+  `Assets/_Project/Scripts/Conveyors/ConveyorSegment.cs` (`TryAccept`/`Update` güç kontrolü
+  eklendi), `Assets/_Project/Scripts/Player/PlayerInteractor.cs` (`PowerPanelTerminal` dalı).
+- Unity içinde henüz çalıştırılmadı: `Shiftworks/Setup/20. Add Power System To Scene` ve
+  `21. Add Power Panel To Scene` (veya tek adımda
+  `Apply Power System (Managers + Panel)`) menüleri — bunlar çalıştırılmadan `PowerManager`,
+  `ProductionStatsTracker` ve elektrik panosu sahnede **oluşmaz**, mevcut makine/konveyörlerin
+  `powerManager`/`powerDemandKw` alanları da boş kalır (bu durumda kod geriye dönük uyumlu
+  davranır — `powerManager == null` kontrolleri sayesinde güç kısıtlaması olmadan, Aşama 8
+  öncesi gibi çalışmaya devam eder, asla hata vermez).
+
+**9. Aşama 9'da değişen/eklenen dosyalar** (bir sonraki oturumda hızlı başvuru için):
+- Yeni: `Assets/_Project/Scripts/Editor/ShiftworksAssemblyProductionSetup.cs` (menü 22-25) —
+  tüm yeni veri/prefab/sahne nesnelerini bu TEK dosya oluşturuyor, yeni bir runtime script
+  (namespace) **gerekmedi**.
+- Değiştirilen: `Assets/_Project/Scripts/Machines/MachineController.cs` — `recipe.InputCount`
+  artık gerçekten okunuyor (`TryAcceptInput` çok-girdili tarifleri arabelleğe alacak şekilde
+  genelleştirildi, yeni `_bufferedInputCount` alanı), `GetPromptFor`'daki "Kesim yapılıyor"
+  metni genel "Üretim yapılıyor"a çevrildi (montaj makinesi için de doğru olsun diye), çıktı
+  hazır metnine "(Çıktı Hazır)" eklendi. **`OrderManager`, `PackingStation`, `ShippingZone`,
+  `ShipmentPackage`, `ConveyorSegment`, `OutputStorage`, `RawMaterialFeeder`,
+  `MachinePlacementController`, `MachinePurchaseManager`, `MachineShopTerminal`,
+  `MachineShopPanelUI`, `OrderBoard`, `OrderBoardPanelUI`, `PowerManager`, `PowerPanelUI`
+  dosyalarının HİÇBİRİ değiştirilmedi** — hepsi zaten yeterince veri-odaklıydı.
+- Unity içinde henüz çalıştırılmadı: `Shiftworks/Setup/22. Create Assembly Product Data` →
+  `23. Create Assembly Machine Definition And Prefab` → `24. Add Assembly Order To Scene` →
+  `25. Add Assembly Machine Shop To Scene` (veya tek adımda
+  `Apply Assembly Production Chain (Data + Scene)`) — bu sırayla çalıştırılmalı (her biri
+  bir öncekinin ürettiği asset'e bağımlı).
 
 ## Sahneler
 - `Assets/_Project/Scenes/WorkshopPrototype.unity` — **asıl tek oyunculu oyun sahnesi**. 20×15 m
@@ -129,6 +211,18 @@ inceleme sonucu sahnede bir hata bulunmadı, bu yüzden sahne/prefab/Editor arac
   `ExpansionBarrier_HallB` (kilitli, satın alınana kadar `CharacterController`'ı durduran katı
   collider + "Üretim Alanı B — Kilitli" `TextMesh` etiketi) kapatıyor. `FactoryExpansionTerminal`
   eski atölye içinde (`-8.3, 0.75, -2.5`) bariyerin güneyinde duruyor.
+- **(Aşama 8)** `WorkshopPrototype.unity` içine eklenen **elektrik panosu**:
+  `PowerPanelTerminal` eski atölye içinde (`-8.3, 0.75, 4`) — `FactoryExpansionTerminal` ile
+  aynı x-sütununda (batı duvarından 1,7 m içeride), farklı z'de, hiçbir mevcut objeyle
+  çakışmıyor. `PowerManager` ve `ProductionStatsTracker` sahne köküne eklenen, görünmez
+  (sadece script) yönetici objeler.
+- **(Aşama 9)** `WorkshopPrototype.unity` içine eklenen **ikinci sipariş panosu ve ikinci
+  makine mağazası terminali**: `AssemblyOrderBoard` (`5, 0.75, -6.5` — orijinal `OrderBoard`'un
+  doğusunda) ve `AssemblyMachineShopTerminal` (`-5, 0.75, -6.5` — orijinal
+  `MachineShopTerminal`'ın batısında), ikisi de güney duvarı boyunca, mevcut hiçbir objeyle
+  çakışmıyor. Montaj makinesinin kendisi sahneye **önceden yerleştirilmiyor** — Aşama 6/7'deki
+  kesim makinesi gibi sadece mağazadan satın alınıp oyuncu tarafından istediği yere
+  (atölyede veya Üretim Alanı B'de) yerleştirilebiliyor.
 
 ## Prefab'lar
 - `Assets/_Project/Prefabs/Player/Player.prefab` — `CharacterController`, `FirstPersonController`,
@@ -140,6 +234,14 @@ inceleme sonucu sahnede bir hata bulunmadı, bu yüzden sahne/prefab/Editor arac
 - **(Aşama 6)** `Assets/_Project/Prefabs/Machines/CuttingMachine.prefab` — Stage 3'teki sahne
   makinesiyle aynı şekilde kurulmuş, bağımsız, satın alınıp yerleştirilebilen kesim makinesi
   prefab'ı; `CutMetalRecipe`'e bağlı, çıkış konveyörüne bağlı değil (yalnızca manuel üretim).
+- **(Aşama 9)** `Assets/_Project/Prefabs/Machines/AssemblyMachine.prefab` — `CuttingMachine`
+  ile **aynı** `MachineController` sınıfını kullanan, görsel olarak ayırt edilebilir (silindir
+  gövde, mor ton) bağımsız montaj makinesi prefab'ı; `AssembleComponentRecipe`'e bağlı
+  (2×CutMetalPart → 1×AssembledComponent, 8 sn), 5 kW, çıkış konveyörüne bağlı değil (yalnızca
+  manuel üretim, Stage 6'nın kesim makinesiyle aynı tasarım kararı).
+- **(Aşama 9)** `Assets/_Project/Prefabs/Items/AssembledComponent.prefab` — `Rigidbody` +
+  `Collider` + `CarryableItem`; görsel olarak MetalSheet/CutMetalPart'tan (küp) farklı bir
+  silindir, ayırt edilmesi kolay.
 - **(Multiplayer prototipi)** `Assets/_Project/Prefabs/Multiplayer/NetworkPlayer.prefab` —
   `CharacterController` + **mevcut, değiştirilmemiş** `FirstPersonController` (varsayılan
   **devre dışı**, sadece sahip istemcide açılır) + `NetworkObject` + `NetworkTransform`
@@ -148,14 +250,34 @@ inceleme sonucu sahnede bir hata bulunmadı, bu yüzden sahne/prefab/Editor arac
 
 ## ScriptableObject Veri Dosyaları
 - `Assets/_Project/Data/Items/MetalSheet.asset`, `CutMetalPart.asset` — `ItemDefinition`.
+- **(Aşama 9)** `Assets/_Project/Data/Items/AssembledComponent.asset` — `ItemDefinition`
+  ("Montaj Parçası", `ProcessedPart`).
 - `Assets/_Project/Data/Recipes/CutMetalRecipe.asset` — `RecipeDefinition` (MetalSheet → CutMetalPart, 5 sn).
+- **(Aşama 9)** `Assets/_Project/Data/Recipes/AssembleComponentRecipe.asset` —
+  `RecipeDefinition` (2× CutMetalPart → 1× AssembledComponent, 8 sn) — `RecipeDefinition`'ın
+  önceden var olan ama hiç kullanılmayan `inputCount` alanını ilk kez 1'den farklı bir değerle
+  kullanan tarif.
 - `Assets/_Project/Data/Orders/FirstMetalPartOrder.asset` — `OrderDefinition` ("İlk Metal Parça
   Siparişi", 3× CutMetalPart, 150 $ ödül, süre sınırı yok).
 - **(Aşama 6)** `Assets/_Project/Data/Machines/CuttingMachineDefinition.asset` — `MachineDefinition`
   ("Kesim Makinesi", 300 $, `CutMetalRecipe`, `CuttingMachine.prefab`).
+- **(Aşama 9)** `Assets/_Project/Data/Machines/AssemblyMachineDefinition.asset` —
+  `MachineDefinition` ("Montaj Makinesi", 450 $, `AssembleComponentRecipe`, `AssemblyMachine.prefab`).
+- **(Aşama 9)** `Assets/_Project/Data/Orders/AssemblyOrder.asset` — `OrderDefinition`
+  ("Montaj Parçası Siparişi", 2× AssembledComponent, 350 $ ödül) — `OrderManager`'ın
+  `availableOrders` listesine, orijinal "İlk Metal Parça Siparişi"nin yanına eklendi.
 - **(Aşama 7)** `Assets/_Project/Data/FactoryExpansions/ProductionAreaB.asset` —
   `FactoryExpansionDefinition` ("Üretim Alanı B", 400 $, 10×15 m — görsel geometri bu asset'ten
   üretilmiyor, sahneye elle inşa edildi; asset sadece fiyat/isim/boyut metni için).
+- **(Aşama 8)** Yeni bir ScriptableObject veri dosyası **oluşturulmadı**. Güç tüketimi
+  (`powerDemandKw`) ve kapasite/yükseltme değerleri (`initialCapacityKw`, `upgradedCapacityKw`,
+  `upgradePriceDollars`) `MachineController`/`ConveyorSegment`/`PowerManager` üzerinde
+  Inspector'dan ayarlanabilir sade `[SerializeField]` alanları olarak tutuluyor —
+  `MachineDefinition`/`RecipeDefinition`'ın aksine, çünkü sahnedeki orijinal makine/konveyörler
+  ile Aşama 6'nın satın alınabilir `CuttingMachine.prefab`'ı ortak bir veri asset'i paylaşmıyor
+  (ikisi de aynı sınıfın bağımsız örnekleri). Yine de kodda **sabit değer yok**; hepsi
+  Inspector'dan görülebilir/değiştirilebilir alanlar — "mümkünse veri tanımlarından alınmalı"
+  talimatının ruhuna uygun, ama ayrı bir asset dosyası gerektirmeden.
 
 ## Önemli Scriptler ve Sistemler Arası İletişim
 - **Etkileşim çekirdeği**: `IInteractable`/`IInteractor` (Core/Interaction). `PlayerInteractor`
@@ -197,6 +319,47 @@ inceleme sonucu sahnede bir hata bulunmadı, bu yüzden sahne/prefab/Editor arac
   `MachineShopPanelUI` ile birebir aynı modal aç/kapat ve "bakiyeyi her `Refresh()`'te yeniden
   oku" desenini izliyor. Başarılı satın alma, `GameHUD.ShowNotification(...)` (bu aşamada
   eklenen genel bildirim metodu) üzerinden "Yeni Üretim Alanı Açıldı!" bildirimini tetikliyor.
+- **(Aşama 8) Elektrik sistemi**: `PowerManager` tek yetkili kaynak — `TryRequestPower` tek
+  atomik metot: zaten tahsisliyse idempotent `true` döner, kapasite yetiyorsa tahsis edip
+  `true`, yetmiyorsa `_waiting` kümesine ekleyip `false` döner. **Saklanan bir bekleme kuyruğu
+  yeniden oynatılmıyor** — her tüketici zaten kendi doğal döngüsüyle tekrar deniyor
+  (`ConveyorSegment` her `Update()`'te, otomatik beslenen bir makine yukarı akıştaki
+  konveyörün her kare tekrar denediği hand-off üzerinden, elle beslenen bir makine oyuncunun
+  tekrar E'ye basmasıyla) — bu yüzden "bekleyen ekipmanlar tekrar değerlendirilmeli" talebi
+  callback/kuyruk altyapısı kurulmadan karşılanıyor. Tahsis sırası saf "ilk isteyen kazanır"
+  (rastgele değil, deterministik) — sahnedeki orijinal hat her zaman runtime'da satın
+  alınan/yerleştirilen nesnelerden önce `Awake()` çalıştığı için doğal olarak önceliklidir;
+  açık bir öncelik alanı istenirse tek değişiklik noktası `PowerManager.HasCapacityFor`/
+  `TryRequestPower`'ın karşılaştırma mantığıdır. `MachineController.TryAcceptInput` gücü
+  girdi tüketimiyle **aynı atomik çağrıda** ister — reddedilirse hiçbir şey tüketilmez, makine
+  `Idle` kalır (ürün kaybı/çoğalması riski yok). `ConveyorSegment.TryAccept` güç yoksa
+  `IsOccupied` ile aynı şekilde reddeder — yukarı akış, mevcut geri-basınç mekanizmasıyla
+  kendiliğinden birikir, ayrı bir "güç yok" özel durumu gerekmez. `ProductionStatsTracker`
+  sadece fabrika geneli toplamı tutar; makine başına sayaçlar (`CompletedCount`,
+  `TotalProcessingSeconds`, `TotalPowerWaitSeconds`) her `MachineController`'ın kendi genel
+  salt-okunur property'leri. `PowerPanelTerminal` + `PowerPanelUI`, diğer panellerle birebir
+  aynı modal aç/kapat desenini izliyor; panel **açıkken her kare** yenileniyor (üretim devam
+  ederken kapasite/kullanım canlı değişebildiği için, diğer panellerin aksine sadece buton
+  tıklamasında değil).
+- **(Aşama 9) Çok aşamalı üretim / montaj makinesi**: `MachineController.TryAcceptInput`
+  artık `recipe.InputCount`'u okuyor — `_bufferedInputCount` adlı yeni bir alan, partiyi
+  TAMAMLAYACAK son parçaya kadar gelen her parçayı güç kontrolü yapmadan arabelleğe alıyor;
+  sadece partiyi tamamlayan çağrı `PowerManager.TryRequestPower`'dan geçiyor — tek atomik
+  işlem ilkesi korunuyor (reddedilirse hiçbir şey tüketilmez). 1 girdili bir tarifte
+  (`CutMetalRecipe`) bu kontrol her zaman ilk parçada tetiklendiği için **kesim makinesinin
+  davranışı Aşama 9 öncesiyle birebir aynı**. `AssemblyMachine`, Stage 3/6'nın kesim
+  makinesiyle **aynı** `MachineController` sınıfını kullanıyor — ikinci bir üretim sistemi
+  yazılmadı, sadece farklı bir `RecipeDefinition` (`AssembleComponentRecipe`) ve
+  `powerDemandKw` (5) ile yapılandırıldı. `OrderManager`'ın zaten çoklu `OrderDefinition`
+  listesi + `HasActiveOrder` tek-aktif-sipariş kısıtı desteklediği için ikinci sipariş
+  (`AssemblyOrder`) sadece listeye eklendi — kod değişmedi. `PackingStation`/`ShippingZone`
+  zaten `activeOrder.RequestedItem`/`package.AssociatedOrder` üzerinden tamamen veri-odaklı
+  çalıştığı için **hiçbir ürün türü ayrımı eklemeye gerek kalmadı**. İkinci `OrderBoard` ve
+  ikinci `MachineShopTerminal` (mevcut `MachinePurchaseManager`'ı paylaşıyor, zaten
+  `Dictionary<MachineDefinition,int>` ile makine türüne göre anahtarlanmış durumda) sahneye
+  eklendi — OrderBoard/MachineShopTerminal'ın kendisi hâlâ "tek nesne = tek sipariş/makine"
+  deseninde (Aşama 5/6'daki gibi), genelleştirilmedi; ikinci bir fiziksel terminal eklemek bu
+  aşamada en az müdahaleli çözümdü.
 - **(Multiplayer prototipi) Hareket senkronizasyonu**: `NetworkPlayerSetup.OnNetworkSpawn()`
   sadece `IsOwner` olan istemcide `FirstPersonController`'ı (ve kamera/`AudioListener`'ı)
   etkinleştirir — bileşen prefab'ta **varsayılan devre dışı** gelir, çünkü her istemci HERKESİN
@@ -271,12 +434,180 @@ sadece orada. O sahnede hiçbir multiplayer butonu **yoktur ve olmayacaktır** �
 ayrım (bkz. `CLAUDE.md`). Multiplayer, ileride (Aşama 18) asıl oyuna entegre edilene kadar
 sadece bu ayrı, minimal test sahnesinde yaşayacak.
 
+## Aşama 8 Test Talimatları (✅ kullanıcı tarafından 18/18 ile tamamlandı)
+
+1. Unity Editor'de **`WorkshopPrototype.unity`** açık olduğundan emin olun (Aşama 8 sadece bu
+   sahnede).
+2. Menüden sırayla **`Shiftworks/Setup/20. Add Power System To Scene`** sonra
+   **`21. Add Power Panel To Scene`** çalıştırın (veya tek adımda
+   `Apply Power System (Managers + Panel)`). Console'da hata olmadığını kontrol edin.
+3. Play Mode'a girin. Mevcut üretim hattının (besleyici → konveyörler → kesim makinesi →
+   depo) **tıpkı Aşama 7 öncesi gibi** çalışmaya devam ettiğini doğrulayın — bu en kritik
+   regresyon testi.
+4. Elektrik panosuna gidin (`-8.3, 0.75, 4` — mağaza terminalinin kuzeyinde, aynı batı
+   duvarı boyunca) ve E'ye basın. Panelde Toplam Kapasite (10 kW), Kullanılan, Boş Kapasite,
+   Bağlı Ekipman (4: 1 makine + 3 konveyör), Bekleyen, Bakiye ve Yükseltme butonu görünmeli.
+5. Makine işlerken (Processing) panele tekrar bakın — Kullanılan kapasitenin 4 kW arttığını,
+   makine bitirince tekrar düştüğünü görün (panel her kare canlı güncelleniyor).
+6. **Yükseltme testi**: "Kapasiteyi Yükselt" butonuna basın (300 $) — bakiyenin düştüğünü,
+   Toplam Kapasitenin 20 kW olduğunu, butonun tekrar tıklanamaz hale geldiğini doğrulayın.
+   Panelin dışına çıkıp tekrar girin, durumun kalıcı olduğunu (20 kW) kontrol edin.
+7. **Yetersiz güç testi** (isteğe bağlı, zorlamak için): Aşama 6 mağazasından ek bir kesim
+   makinesi satın alıp yerleştirin; aynı anda birden fazla makineyi işletmeye çalışıp
+   kapasite dolduğunda makinenin bakışta "Yetersiz Güç" yazdığını ve durum ışığının mor
+   renge döndüğünü doğrulayın; kapasite boşalınca (diğer makine bitirince) tekrar
+   çalışabildiğini kontrol edin.
+8. Aşama 7'nin genişletme/geçit sisteminin ve mağaza/sipariş panellerinin bozulmadığını,
+   hiçbir panelin birbirine karışmadığını (aynı anda iki panel açılmadığını, Escape'in
+   sadece açık paneli kapattığını) doğrulayın.
+
+## Aşama 9 Test Talimatları
+
+0. **(Yeni — teslimat hatası düzeltmesi)** Menüden **`26. Fix Order Board Accept Feedback`**
+   çalıştırın (22-25 zaten çalıştırılmışsa sadece bunu çalıştırmanız yeterli). Bu, her iki
+   sipariş panosuna da "başka bir sipariş aktif" uyarısını ekler.
+1. `WorkshopPrototype.unity` açıkken menüden sırayla **`22. Create Assembly Product Data`** →
+   **`23. Create Assembly Machine Definition And Prefab`** → **`24. Add Assembly Order To
+   Scene`** → **`25. Add Assembly Machine Shop To Scene`** → **`26. Fix Order Board Accept
+   Feedback`** çalıştırın (veya tek adımda `Apply Assembly Production Chain (Data + Scene)`,
+   ardından ayrıca 26'yı). Console'da hata olmadığını kontrol edin — bu sırayla çalıştırmak
+   önemli, her adım bir öncekinin ürettiği asset'e bağımlı.
+2. Play Mode'a girin. **Regresyon**: mevcut kesim makinesi/konveyör hattı, Aşama 7 genişletmesi
+   ve Aşama 8 elektrik panosu hiçbiri bozulmamış olmalı.
+3. Orijinal `MachineShopTerminal`'a (`-2.5, 0.75, -6.5`) gidin — hâlâ sadece "Kesim Makinesi"
+   satıyor olmalı. Yeni `AssemblyMachineShopTerminal`'a (`-5, 0.75, -6.5`, batıda) gidin —
+   "Montaj Makinesi" (450 $) satın alınabilmeli, yerleştirme önizlemesi boş zeminde yeşil,
+   duvar/makinelerle çakışan konumlarda kırmızı olmalı (Aşama 6'daki "her yer geçersiz" hatası
+   tekrarlanmamalı).
+4. Montaj makinesini yerleştirin. Kesim makinesinden 2 adet CutMetalPart üretip (veya
+   depodan/elle taşıyarak) montaj makinesine tek tek yerleştirin — ilk parçada makinenin
+   bakışta "CutMetalPart Gerekiyor (1/2)" gibi bir ilerleme göstermesi, ikinci parçada
+   üretimin başlayıp "Üretim yapılıyor... %X" yazması, 8 saniye sonra "Çıktı Hazır" olması
+   beklenir.
+5. Üretilen Montaj Parçası'nı (silindir, mor/mavi) elle taşıyıp `PackingStation`'a götürün —
+   önce hangi sipariş aktifse onu paketlediğini doğrulayın (iki sipariş panosundan hangisini
+   kabul ettiyseniz).
+6. **Önce** yeni `AssemblyOrderBoard`'a (`5, 0.75, -6.5`, doğuda) gidip "Montaj Parçası
+   Siparişi"ni kabul edin (üretime başlamadan önce). Orijinal sipariş hâlâ aktifse (önceki
+   oturumlardan kalmış olabilir) panelde artık kırmızı "Başka bir sipariş zaten aktif — önce
+   onu tamamlayıp teslim edin." uyarısı görünmeli ve Kabul Et butonu tıklanamaz olmalı —
+   bu durumda önce orijinal `MachineShopTerminal`/`OrderBoard` tarafındaki siparişi
+   (3× CutMetalPart) tamamlayıp `ShippingZone`'a teslim edin, sonra tekrar deneyin. Kabul
+   başarılı olduğunda 2 Montaj Parçası paketleyip teslim edin, 350 $ aldığınızı doğrulayın.
+7. Elektrik panosuna gidip montaj makinesinin "Bağlı Ekipman" sayısını 1 artırdığını, işlerken
+   "Kullanılan" kapasiteyi 5 kW artırdığını, yetersiz kapasitede makinenin "Yetersiz Güç"
+   gösterdiğini doğrulayın.
+8. Üretim Alanı B satın alınmışsa (Aşama 7), montaj makinesini oraya da yerleştirip aynı
+   şekilde çalıştığını doğrulayın (aynı `PowerManager`, zemin/collider kuralları değişmedi).
+
+## Aşama 9 Teslimat Hatası Düzeltmesi
+
+Kullanıcı, montaj makinesini çalıştırıp 2 `AssembledComponent` ürettikten sonra bu ürünleri
+hiçbir yere teslim edemediğini bildirdi ("ürünler yerde kalıyor").
+
+**Kök neden (kesinleştirildi — sahne dosyası da doğrulandı, kablolama sorunu değil)**:
+`OrderBoardPanelUI.Refresh()` içinde "Siparişi Kabul Et" butonu sadece **o panonun kendi
+siparişinin** `Available` olup olmadığına bakıyordu — `OrderManager.HasActiveOrder`'ı (aynı
+anda sadece BİR siparişin Aktif/Sevkiyata Hazır olabileceği kuralı) hiç kontrol etmiyordu. Bu
+Aşama 9'dan önce fark edilemezdi çünkü tek bir sipariş tanımı vardı. Kullanıcının orijinal
+"İlk Metal Parça Siparişi"si hâlâ Aktif (veya Sevkiyata Hazır ama teslim edilmemiş) durumdaysa,
+yeni "Montaj Parçası Siparişi" panosu "Müsait" gösterip Kabul Et butonunu tıklanabilir
+bırakıyordu — ama tıklandığında `OrderManager.TryAcceptOrder` içindeki
+`HasActiveOrder` kontrolü **sessizce** reddediyordu, ekranda hiçbir şey değişmiyordu. Oyuncu
+bunu fark etmeden ürünleri üretip `PackingStation`'a götürdü, ama `OrderManager.ActiveOrder`
+hâlâ eski CutMetalPart siparişi olduğu için ürün türü uyuşmadı ve reddedildi.
+
+**Düzeltme**: `OrderBoardPanelUI.cs`'e `warningText` alanı eklendi; Kabul Et butonu artık
+`state == Available && !HasActiveOrder` kontrolünden geçiyor (başka sipariş aktifken
+tıklanamaz hale geliyor) ve panelde "Başka bir sipariş zaten aktif — önce onu tamamlayıp
+teslim edin." uyarısı görünüyor. `ShiftworksOrdersSetup.cs`'e yeni, idempotent bir düzeltme
+menüsü (**`26. Fix Order Board Accept Feedback`**) eklendi — bu menü hem orijinal sipariş
+panosuna hem de yeni montaj sipariş panosuna bu uyarı metnini geriye dönük ekliyor.
+`PackingStation`/`ShippingZone`/`OrderManager`'ın kendisi **değiştirilmedi** — onlar zaten
+doğru çalışıyordu, eksik olan sadece oyuncuya neden "hiçbir şey olmadığını" söyleyen geri
+bildirimdi.
+
+**Kullanıcının şu an yapması gereken** (eğer orijinal sipariş hâlâ aktifse): Önce orijinal
+"İlk Metal Parça Siparişi"ni tamamlayıp (3× CutMetalPart paketleyip) `ShippingZone`'a teslim
+edin — bu, `HasActiveOrder`'ı serbest bırakır. Ancak bundan sonra `AssemblyOrderBoard`'dan
+"Montaj Parçası Siparişi"ni kabul edebilirsiniz.
+
+`26. Fix Order Board Accept Feedback` kullanıcı tarafından çalıştırıldı (sahne dosyasında
+`WarningText` nesneleri doğrulandı).
+
+## Aşama 9 İkinci Üretim Takılması Düzeltmesi
+
+Kullanıcı, montaj makinesinde ilk `AssembledComponent`'i ürettikten sonra ikinci üretimi
+başlatmaya çalışırken ekranın sürekli "E - Montaj Parçası Al (Çıktı Hazır)" gösterdiğini ve
+E'nin bir işe yaramadığını bildirdi.
+
+**Kök neden**: Bir hata/veri kaybı değil — `MachineController.GetPromptFor`'un `OutputReady`
+metni, oyuncunun elinde bir şey olup olmadığına bakmadan her zaman "E - Al" diyordu.
+`PlayerInteractor.HandleMachineInteraction` ise oyuncu bir şey taşıyorsa E'yi her zaman
+**besleme** (`TryAcceptInput`) olarak yorumluyor, **alma** (`TryCollectOutput`) olarak değil.
+`TryAcceptInput`, makine `OutputReady` (henüz `Idle` değil) olduğu için sessizce reddediyordu
+— yani oyuncu elinde bir CutMetalPart (üçüncü tur için önceden almış) taşırken makineye
+baktığında, E'ye bastıkça hiçbir şey olmuyordu ve metin hiç değişmiyordu, bu da "takılmış"
+gibi görünüyordu. Çıktının gerçekten alınıp alınmadığı, slotun boşalıp boşalmadığı,
+çoğalma/kayıp riski — **hiçbiri sorun değildi**, kod seviyesinde doğrulandı.
+
+**Düzeltme**: `GetPromptFor`'un `OutputReady` dalı artık `carriedItem`'a bakıyor — elinde bir
+şey varken "Çıktı Hazır — Önce Elinizdekini Bırakın (G) veya Teslim Edin" gösteriyor, boş
+elken eskisi gibi "E - X Al (Çıktı Hazır)". **Sadece metin değişti, hiçbir durum/mantık
+değişmedi** — "çıktı doluyken yeni üretim başlamaması" kuralı aynen korundu.
+
+## Montaj Makinesi — Yeniden Doğrulama (bu oturum, kod değişikliği yok)
+
+Kullanıcı ikinci üretimin "zorlandığını" bildirdi ve önceki oturumdaki düzeltmenin
+(`"Çıktı Hazır — Önce Elinizdekini..."`) gerçek bir hatayı mı yoksa normal davranışı mı
+gösterdiğini sordu. Tüm döngü (`TryAcceptInput` → `CompleteProcessing` → `TryCollectOutput`)
+satır satır yeniden izlendi: `_bufferedInputCount` her tamamlanan partiden hemen önce 0'a
+sıfırlanıyor, `_pendingOutput` toplanınca `null`'a dönüyor, `HasPower`/durum her döngüde doğru
+sıfırlanıyor — **gerçek bir hata bulunamadı, hiçbir kod değişmedi**. Gözlemlenen mesaj,
+oyuncunun elinde (bir sonraki tur için önceden aldığı) bir ürün varken çıktıyı almaya
+çalışmasının **beklenen** sonucu; önceki oturumdaki metin düzeltmesi bunu zaten doğru
+açıklıyor. Doğru sıra: eli boşken çıktıyı al → (gerekirse G ile bırak) → 2 CutMetalPart'ı
+tek tek yerleştir → üretim otomatik başlar.
+
+## Geliştirme Ortamı Test Parası (F8)
+
+Yeni `Assets/_Project/Scripts/Debugging/DevelopmentCheats.cs` — tamamen `#if UNITY_EDITOR`
+içinde (Steam/release build'de sınıf hâlâ var, ama `Update()` boş çalışır, "missing script"
+riski yok). F8'e her basışta (`wasPressedThisFrame`, basılı tutmak tekrar tetiklemez)
+`EconomyManager.AddFunds(10000)` çağrılır — **gerçek ödül/satın alma sistemiyle aynı tek
+giriş noktası**, ayrı bir bakiye yazma yolu yok. Bir panel açıkken (`PlayerInteractor.
+IsInputSuspended`) F8 hiçbir şey yapmaz. Console'a `"TEST: +10000$ eklendi"` yazar. HUD'daki
+bakiye zaten her kare `EconomyManager.Balance`'ı okuduğu için (`GameHUD`'a hiç dokunulmadı)
+anında güncellenir. `ShiftworksDevToolsSetup.cs` (Editor, menü **27**) sahneye
+`DevelopmentCheats` nesnesini ekleyip mevcut `EconomyManager`/`Player`'a bağlar.
+
+## Aşama 9 — E Tuşu Otomatik Bırakma (davranış değişikliği)
+
+Kullanıcı, metin düzeltmesine rağmen ("Çıktı Hazır — Önce Elinizdekini...") ikinci üretimde
+hâlâ takıldığını bildirdi — ekran görüntüsü, elinde bir CutMetalPart varken montaj makinesine
+baktığını doğruladı. Kod incelemesi (yeniden) hiçbir state/veri hatası bulmadı; sorun saf
+etkileşim sürtünmesiydi: çıktıyı almak için önce **G** (bırak) sonra **E** (al) — iki ayrı
+tuş — gerekiyordu, ve bu adım kullanıcı tarafından art arda üç kez atlanmış görünüyor.
+
+**Değişiklik**: `PlayerInteractor.HandleMachineInteraction` artık, bakılan makine `OutputReady`
+durumundaysa ve oyuncunun elinde bir şey varsa, **E'ye basıldığında önce otomatik olarak
+elindekini bırakıp aynı basışta çıktıyı alıyor**. Hiçbir ürün kaybolmuyor/çoğalmıyor — bırakılan
+nesne olduğu yerde (oyuncunun önünde) kalıyor, istenirse hemen tekrar alınabilir. "Çıktı
+doluyken yeni üretim başlamaması" kuralı **değişmedi** — bu sadece E'nin OutputReady'de her
+zaman "bu makineyle ilgilen" anlamına gelmesini sağlıyor. `GetPromptFor` metni buna göre
+güncellendi: "E - Elinizdekini Bırak ve X Al". Bu, **Stage 3'ün kesim makinesi dahil tüm
+`MachineController` örnekleri için geçerli** (tek bir sınıf, iki üretim sistemi yok ilkesi
+korundu).
+
 ## Bilinen Teknik Riskler
 - Aşama 1'den sonra hiçbir aşamada gerçek bir Unity batch-mode derleme testi yapılmadı (Unity
   Editor kullanıcı tarafından sürekli açık tutulduğu için); tüm kod elle satır satır incelenerek
   doğrulandı, derleyici onayı değildir.
 - `OrderManager` şu an sadece **tek bir aktif sipariş**i destekliyor (`HasActiveOrder` kontrolü
-  ikinci kabulü engelliyor) — çoklu sipariş eklenince bu kısıt gözden geçirilmeli.
+  ikinci kabulü engelliyor) — Aşama 9 bu kısıtı **kasıtlı olarak korudu** (spec'in izniyle);
+  artık gerçekten iki sipariş tanımı listede olduğu için bu sınır aktif şekilde test edilebilir
+  (bkz. "Aşama 9 Test Talimatları" madde 6) — çoklu AKTİF sipariş gelecekte eklenirse bu kısıt
+  gözden geçirilmeli.
 - Otomatik üretim hattı ve sipariş istasyonlarının sahnedeki konumları elle hesaplanıp
   çarpışmayacak şekilde ayarlandı, ama tam görsel yerleşim kullanıcı tarafından Editor'de
   gözle doğrulanmadı (sadece fonksiyonel testler yapıldı).
@@ -359,3 +690,59 @@ sadece bu ayrı, minimal test sahnesinde yaşayacak.
   (sonsuz menzilli, zaten tüm sahneyi kapsıyor) — bilinçli olarak ek bir ışık eklenmedi
   ("gereksiz asset ekleme" talimatına uyarak). Görsel olarak yetersiz görünürse ayrıca bir
   `Point Light` eklenebilir.
+- **(Aşama 8, ÇÖZÜLDÜ)** Hiçbir script gerçek Unity derlemesiyle test edilmedi iddiası artık
+  geçerli değil — kullanıcı Aşama 8'i 18/18 testle onayladı, yani tüm Aşama 8 script'leri
+  hatasız derlendi ve çalıştı.
+- **(Aşama 8, yeni)** Başlangıç kapasitesi 10 kW, mevcut hattın (1 makine 4 kW tepe + 3
+  konveyör × 0,5 kW sürekli = 5,5 kW tepe) rahatça altında olduğu için **değiştirilmeden**
+  bırakıldı — kod incelemesiyle doğrulandı, Unity'de gözle de teyit edilmeli (adım 3,
+  "Aşama 8 Test Talimatları").
+- **(Aşama 8, yeni)** "Üretim sırasında güç kesilirse duraklasın, geri gelince kaldığı yerden
+  devam etsin" davranışı kod seviyesinde doğru uygulandı (`Update()`'teki zaman akışı
+  `HasPower`'a bağlı) ama **bu aşamanın özelliklerinde zaten tahsis edilmiş bir gücü geri
+  alan hiçbir mekanizma yok** (kapasite azaltma, elektrik kesintisi vb. kapsam dışı
+  bırakıldı) — yani bu güvenlik davranışı şu an pratikte hiç tetiklenmeyecek, sadece
+  ileride (ör. Aşama 16 arıza sistemi) böyle bir mekanizma eklenirse sıfır ek değişiklikle
+  doğru çalışacak şekilde tasarlandı. Bu normal ve beklenen bir durum, hata değil.
+- **(Aşama 8, yeni)** "Yetersiz güç nedeniyle bekleyen ekipman" sayacı, elle beslenen bir
+  makinenin oyuncu E'ye bastıktan sonra tekrar denemediği durumlarda hafifçe abartılı
+  kalabilir (makine "bekliyor" olarak işaretli kalır çünkü oyuncu başka bir şey yapıyordur)
+  — kasıtlı, basit bir yaklaşım (ayrı bir "pes etti" durumu takip edilmiyor); otomatik
+  (konveyörle beslenen) ekipmanlar için bu sayaç her zaman anlık doğru.
+- **(Aşama 8, yeni)** `ShiftworksPowerSetup.AddPowerSystemToScene`, sahnedeki `CuttingMachine`
+  ve üç `Conveyor_*` objesini **isimle** bulup bağlıyor — bu objelerin adları Aşama 1/3/4
+  kurulum araçlarınca sabit şekilde veriliyor, değiştirilmediği sürece güvenli. Menü, `.prefab`
+  asset'teki `MachineController`'ın `powerManager` alanını **kasıtlı olarak boş bırakıyor**
+  (prefab asset'ler sahne nesnesine kalıcı referans tutamaz) — bu alan yerine her çalışma
+  zamanı örneği kendi `Awake()`'inde `FindFirstObjectByType<PowerManager>()` ile sahnedeki tek
+  `PowerManager`'ı buluyor; bu, Aşama 6/7'de hiç kullanılmamış yeni bir desen, ama sahnede tam
+  olarak bir `PowerManager` olduğu sürece güvenli ve deterministik.
+- **(Aşama 9, yeni)** Hiçbir script gerçek Unity derlemesiyle test edilmedi — Editor kullanıcı
+  tarafından sürekli açık tutulduğu için elle kod incelemesiyle ilerlendi, önceki aşamalarla
+  aynı sınırlama. Özellikle `MachineController.TryAcceptInput`'teki `recipe.InputCount`
+  genellemesi kritik — kesim makinesinin (InputCount=1) davranışının gerçekten değişmediği
+  Unity'de Play Mode'da doğrulanmalı (bkz. "Aşama 9 Test Talimatları" madde 2).
+- **(Aşama 9, yeni)** `ShiftworksAssemblyProductionSetup.cs`'nin 4 menü adımı **sırayla**
+  çalıştırılmalı (22→23→24→25) — her biri bir öncekinin ürettiği asset'e (`AssembledComponent`
+  item'ı, `AssembleComponentRecipe`, `AssemblyMachineDefinition`) bağımlı; yanlış sırada
+  çalıştırılırsa Console'da açık bir hata mesajı verip o adımı atlar (sessizce bozuk bir
+  duruma düşmez), ama yine de doğru sırayla çalıştırılmalı.
+- **(Aşama 9, yeni)** İkinci `OrderBoard`/`MachineShopTerminal` eklemek yerine (OrderBoard/
+  MachineShopTerminal'ı çoklu-seçim listesine genelleştirmek) bilinçli bir mimari tercihti —
+  "mevcut mimariye uygun, en az müdahale" ilkesiyle gerekçelendirildi (bkz. "Önemli Scriptler"
+  bölümü). İleride çok daha fazla ürün/makine türü eklenirse (Aşama 9'un ötesinde), fiziksel
+  terminal sayısının da artmasındansa gerçek bir çoklu-seçim UI'sına geçmek gerekebilir —
+  şimdilik 2 sipariş/2 makine türü için bu ölçeklenme sorunu değil.
+- **(Aşama 9, yeni)** Montaj makinesi (ve kesim makinesinin satın alınan kopyası) **çıkış
+  konveyörüne bağlı değil** — Aşama 6'nın kesim makinesi kopyasıyla aynı kasıtlı tasarım
+  kararı (yalnızca manuel üretim). Spec'in "uygun konveyör bağlantısı mevcutsa" şartı
+  gereği zaten opsiyoneldi; serbest konveyör inşa sistemi olmadığı için bu aşamada
+  bağlanmadı, gelecekte (Aşama 11) değerlendirilebilir.
+- **(Yeni)** `DevelopmentCheats` (F8 test parası) `#if UNITY_EDITOR` ile korunuyor — gerçek
+  bir Windows Build (Steam/release) alındığında bu kod **derlenmez**, F8'in fiziksel olarak
+  hiçbir etkisi olmaz. Yine de bu bileşen `WorkshopPrototype.unity`'de kalıcı bir sahne
+  nesnesi; ileride bir sürüm hazırlığı yapılırken (Aşama 20) sahneden kaldırılıp
+  kaldırılmayacağı ayrıca kararlaştırılmalı (muhtemelen gerek yok, zaten build'de inert).
+- **(Yeni)** Hiçbir script gerçek Unity derlemesiyle test edilmedi (bu oturumun
+  `DevelopmentCheats`/`ShiftworksDevToolsSetup` dahil) — önceki aşamalarla aynı sınırlama,
+  kullanıcı Editor'e geçip Console'u kontrol etmeli.

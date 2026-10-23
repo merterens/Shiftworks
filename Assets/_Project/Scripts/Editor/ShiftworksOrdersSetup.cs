@@ -44,6 +44,79 @@ namespace Shiftworks.EditorTools
         [MenuItem("Shiftworks/Setup/11. Fix HUD Visibility (Pivot + Scaler)")]
         public static void FixHudVisibilityMenuItem() => FixHudVisibility();
 
+        [MenuItem("Shiftworks/Setup/26. Fix Order Board Accept Feedback")]
+        public static void FixOrderBoardAcceptFeedbackMenuItem() => FixOrderBoardAcceptFeedback();
+
+        /// <summary>
+        /// Retrofits a WarningText line onto every existing order board panel (the original
+        /// "OrderBoardPanelCanvas" and, once Stage 9 has run, "AssemblyOrderBoardPanelCanvas")
+        /// so OrderBoardPanelUI can explain why "Siparişi Kabul Et" did nothing. Before this
+        /// fix, Accept was only disabled based on the BOARD'S OWN order being non-Available —
+        /// with a second order now in the scene, clicking Accept on a Available-but-blocked
+        /// board (OrderManager.HasActiveOrder true for a DIFFERENT order) silently failed with
+        /// no visible change. Never rebuilds a panel; skips any canvas that already has the
+        /// WarningText child, so safe to re-run.
+        /// </summary>
+        private static void FixOrderBoardAcceptFeedback()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                Debug.LogWarning("[Shiftworks] İşlem iptal edildi: açık sahnede kaydedilmemiş değişiklikler vardı.");
+                return;
+            }
+
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+            string[] canvasNames = { "OrderBoardPanelCanvas", "AssemblyOrderBoardPanelCanvas" };
+            int fixedCount = 0;
+
+            foreach (string canvasName in canvasNames)
+            {
+                GameObject canvasGo = GameObject.Find(canvasName);
+                if (canvasGo == null)
+                {
+                    continue;
+                }
+
+                OrderBoardPanelUI panelUi = canvasGo.GetComponent<OrderBoardPanelUI>();
+                Transform panelRoot = canvasGo.transform.Find("PanelRoot");
+                if (panelUi == null || panelRoot == null)
+                {
+                    Debug.LogWarning($"[Shiftworks] '{canvasName}' beklenen yapıda değil, atlandı.");
+                    continue;
+                }
+
+                if (panelRoot.Find("WarningText") != null)
+                {
+                    Debug.Log($"[Shiftworks] '{canvasName}' zaten uyarı metnine sahip, dokunulmadı.");
+                    continue;
+                }
+
+                Vector2 center = new Vector2(0.5f, 0.5f);
+                // Sits between StateText (y 0 to -35, offset -35) and the Accept/Close buttons
+                // (y -140) with clearance on both sides.
+                Text warningText = CreateText(panelRoot, "WarningText", "Başka bir sipariş zaten aktif.", 16,
+                    TextAnchor.MiddleCenter, center, center, new Vector2(0f, -105f), new Vector2(440f, 26f));
+                warningText.color = new Color(1f, 0.4f, 0.4f);
+                warningText.enabled = false;
+
+                SerializedObject so = new SerializedObject(panelUi);
+                so.FindProperty("warningText").objectReferenceValue = warningText;
+                so.ApplyModifiedProperties();
+
+                fixedCount++;
+            }
+
+            if (fixedCount > 0)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+                AssetDatabase.SaveAssets();
+            }
+
+            Debug.Log($"[Shiftworks] {fixedCount} sipariş panosu 'başka sipariş aktif' uyarısıyla güncellendi.");
+        }
+
         /// <summary>
         /// Repairs the HUD/panel canvases already built by menu 10 in-place: corrects each
         /// top/corner-anchored Text's RectTransform.pivot to match its anchor (the bug that

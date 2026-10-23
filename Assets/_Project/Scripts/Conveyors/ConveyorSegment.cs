@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Shiftworks.Items;
+using Shiftworks.Power;
 using UnityEngine;
 
 namespace Shiftworks.Conveyors
@@ -9,8 +10,15 @@ namespace Shiftworks.Conveyors
     /// off to the next receiver. Ownership is explicit: the segment that currently holds
     /// an item is the only thing allowed to move it, and a hand-off only ever happens
     /// through TryAccept — no Rigidbody pushing, no two owners at once.
+    ///
+    /// (Stage 8) The belt's drive motor draws power continuously once it has something to
+    /// do, not per-item: TryAccept requires HasPower, so a de-powered segment simply refuses
+    /// every hand-off exactly like an already-occupied one — upstream backs up through the
+    /// same existing back-pressure mechanism, no new code needed to avoid ever discarding an
+    /// item. Whatever is already aboard just freezes (Update's progress advance is gated on
+    /// HasPower too) until power returns.
     /// </summary>
-    public class ConveyorSegment : MonoBehaviour, IConveyorReceiver
+    public class ConveyorSegment : MonoBehaviour, IConveyorReceiver, IPowerConsumer
     {
         [Header("Path")]
         [SerializeField] private Transform startPoint;
@@ -23,11 +31,18 @@ namespace Shiftworks.Conveyors
         // pressure) forever instead of ever deleting it.
         [SerializeField] private MonoBehaviour nextReceiverBehaviour;
 
+        [Header("Power (Stage 8)")]
+        [SerializeField] private float powerDemandKw = 0.5f;
+        // See MachineController's identical field for why a runtime fallback is needed.
+        [SerializeField] private PowerManager powerManager;
+
         [Header("Visual (optional)")]
         [SerializeField] private Transform[] beltMarkers;
         [SerializeField] private float markerLoopSpeed = 0.5f;
 
         public bool IsOccupied => _occupant != null;
+        public float PowerDemandKw => powerDemandKw;
+        public bool HasPower { get; private set; }
 
         private IConveyorReceiver _nextReceiver;
         private CarryableItem _occupant;
@@ -38,6 +53,24 @@ namespace Shiftworks.Conveyors
         {
             _nextReceiver = nextReceiverBehaviour as IConveyorReceiver;
             _segmentLength = Mathf.Max(0.01f, Vector3.Distance(startPoint.position, endPoint.position));
+
+            if (powerManager == null)
+            {
+                powerManager = FindFirstObjectByType<PowerManager>();
+            }
+
+            if (powerManager != null)
+            {
+                powerManager.Register(this);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (powerManager != null)
+            {
+                powerManager.Unregister(this);
+            }
         }
 
         private void Start()
@@ -47,7 +80,7 @@ namespace Shiftworks.Conveyors
 
         public bool TryAccept(CarryableItem item)
         {
-            if (IsOccupied || item == null)
+            if (IsOccupied || item == null || !RequestPower())
             {
                 return false;
             }
@@ -58,11 +91,34 @@ namespace Shiftworks.Conveyors
             return true;
         }
 
+        private bool RequestPower()
+        {
+            if (HasPower)
+            {
+                return true;
+            }
+
+            if (powerManager == null)
+            {
+                // No manager wired: unrestricted, same as before Stage 8.
+                HasPower = true;
+                return true;
+            }
+
+            HasPower = powerManager.TryRequestPower(this);
+            return HasPower;
+        }
+
         private void Update()
         {
             AnimateMarkers();
 
             if (_occupant == null)
+            {
+                return;
+            }
+
+            if (!RequestPower())
             {
                 return;
             }

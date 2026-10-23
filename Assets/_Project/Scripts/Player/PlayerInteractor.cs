@@ -4,6 +4,7 @@ using Shiftworks.Factory;
 using Shiftworks.Items;
 using Shiftworks.Machines;
 using Shiftworks.Orders;
+using Shiftworks.Power;
 using Shiftworks.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -170,6 +171,12 @@ namespace Shiftworks.Player
                 return;
             }
 
+            if (_currentTarget is PowerPanelTerminal powerTerminal)
+            {
+                HandlePowerPanelInteraction(powerTerminal);
+                return;
+            }
+
             if (_currentTarget is PackingStation station)
             {
                 HandlePackingInteraction(station);
@@ -198,6 +205,19 @@ namespace Shiftworks.Player
 
         private void HandleMachineInteraction(MachineController machine)
         {
+            // A machine with a finished part waiting can never accept new input (TryAcceptInput
+            // requires Idle), so if the player's hands are full there is nothing a "feed"
+            // attempt could do anyway — the only thing E can mean here is "deal with this
+            // machine". Dropping first (exactly what G already does) and then collecting in
+            // the same press removes the two-separate-keys dance (G, then E) that repeatedly
+            // looked like a stuck machine: nothing is lost, the dropped item just lands at the
+            // player's feet, pickup-able immediately after.
+            if (machine.State == MachineState.OutputReady && _carriedItem != null)
+            {
+                RequestDrop(_carriedItem);
+                _carriedItem = null;
+            }
+
             if (_carriedItem != null)
             {
                 if (machine.TryAcceptInput(_carriedItem))
@@ -246,6 +266,12 @@ namespace Shiftworks.Player
         }
 
         private void HandleExpansionTerminalInteraction(FactoryExpansionTerminal terminal)
+        {
+            SuspendForUI();
+            terminal.OpenPanel(ResumeFromUI);
+        }
+
+        private void HandlePowerPanelInteraction(PowerPanelTerminal terminal)
         {
             SuspendForUI();
             terminal.OpenPanel(ResumeFromUI);

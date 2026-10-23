@@ -30,9 +30,11 @@ Tüm oyun kodu `Assets/_Project/Scripts/` altında, namespace'e göre klasörlen
 | `Orders` | `OrderManager`, `OrderDefinition`, `OrderState`, `PackingStation`, `ShippingZone`, `ShipmentPackage` |
 | `Economy` | `EconomyManager` |
 | `Factory` | **(Aşama 7)** `FactoryExpansionDefinition`, `FactoryExpansionManager` (satın alma/kilit açma — tek yetkili durum), `FactoryExpansionGate` (bariyer, sadece durumu okur), `FactoryExpansionTerminal` |
-| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD` (genel bildirim desteğiyle), `OrderBoardPanelUI`, `MachineShopPanelUI`, **(Aşama 7)** `FactoryExpansionPanelUI` |
+| `Power` | **(Aşama 8)** `IPowerConsumer`, `PowerManager` (kapasite/tahsis — tek yetkili durum), `ProductionStatsTracker` (fabrika geneli üretim sayacı), `PowerPanelTerminal` |
+| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD` (genel bildirim desteğiyle), `OrderBoardPanelUI`, `MachineShopPanelUI`, **(Aşama 7)** `FactoryExpansionPanelUI`, **(Aşama 8)** `PowerPanelUI` |
 | `Multiplayer` | `NetworkPlayerSetup`, `MultiplayerConnectionUI` — yalnızca `MultiplayerPrototype.unity` sahnesinde kullanılır, tek oyunculu sistemlerden bağımsız |
-| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup`, `ShiftworksMachineShopSetup`, `ShiftworksMultiplayerPrototypeSetup`, **(Aşama 7)** `ShiftworksFactoryExpansionSetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`) |
+| `Debugging` | **(Aşama 9)** `DevelopmentCheats` — F8 ile +10.000 $ test parası, tamamen `#if UNITY_EDITOR` içinde, Steam/release build'de inert |
+| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup`, `ShiftworksMachineShopSetup`, `ShiftworksMultiplayerPrototypeSetup`, **(Aşama 7)** `ShiftworksFactoryExpansionSetup`, **(Aşama 8)** `ShiftworksPowerSetup`, **(Aşama 9)** `ShiftworksAssemblyProductionSetup`, `ShiftworksDevToolsSetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`) |
 
 **Tasarım ilkeleri (tüm sistemlerde tutarlı şekilde uygulanıyor):**
 - Her sistemin durumu **tek bir yetkili kaynaktan** yönetilir (`MachineController.State`,
