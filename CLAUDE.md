@@ -29,9 +29,10 @@ Tüm oyun kodu `Assets/_Project/Scripts/` altında, namespace'e göre klasörlen
 | `Conveyors` | `ConveyorSegment`, `IConveyorReceiver`, `RawMaterialFeeder`, `OutputStorage` |
 | `Orders` | `OrderManager`, `OrderDefinition`, `OrderState`, `PackingStation`, `ShippingZone`, `ShipmentPackage` |
 | `Economy` | `EconomyManager` |
-| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD`, `OrderBoardPanelUI`, `MachineShopPanelUI` |
+| `Factory` | **(Aşama 7)** `FactoryExpansionDefinition`, `FactoryExpansionManager` (satın alma/kilit açma — tek yetkili durum), `FactoryExpansionGate` (bariyer, sadece durumu okur), `FactoryExpansionTerminal` |
+| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD` (genel bildirim desteğiyle), `OrderBoardPanelUI`, `MachineShopPanelUI`, **(Aşama 7)** `FactoryExpansionPanelUI` |
 | `Multiplayer` | `NetworkPlayerSetup`, `MultiplayerConnectionUI` — yalnızca `MultiplayerPrototype.unity` sahnesinde kullanılır, tek oyunculu sistemlerden bağımsız |
-| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup`, `ShiftworksMachineShopSetup`, `ShiftworksMultiplayerPrototypeSetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`) |
+| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup`, `ShiftworksMachineShopSetup`, `ShiftworksMultiplayerPrototypeSetup`, **(Aşama 7)** `ShiftworksFactoryExpansionSetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`) |
 
 **Tasarım ilkeleri (tüm sistemlerde tutarlı şekilde uygulanıyor):**
 - Her sistemin durumu **tek bir yetkili kaynaktan** yönetilir (`MachineController.State`,
@@ -58,9 +59,14 @@ Uzun vadede **host-authoritative** 1–8 oyunculu co-op. Oyunun asıl sistemleri
 ekonomi, envanter vb.) henüz gerçek Netcode/RPC entegrasyonu yok — ama her sistem bu geçişi
 kolaylaştıracak şekilde tasarlandı (tek yetkili durum, atomik işlemler).
 
-Aşama 6 civarında planlanan küçük **iki oyunculu teknik ağ prototipi tamamlandı ve başarıyla
-test edildi** (Netcode for GameObjects + Unity Transport, ayrı `MultiplayerPrototype.unity`
-sahnesinde). **Bu, oyunun bütün sistemlerinin multiplayer olduğu anlamına gelmez** — sadece
+Aşama 6 civarında planlanan küçük **iki oyunculu teknik ağ prototipi geliştirildi** (Netcode
+for GameObjects + Unity Transport, ayrı `MultiplayerPrototype.unity` sahnesinde) **ancak
+kullanıcı tarafından gerçek bağlantı testi henüz doğrulanamadı** — önceki bir not bunun
+"başarıyla test edildi" olduğunu söylüyordu, bu **yanlıştı ve düzeltildi**. Kullanıcı test
+ekranında Host/Client butonlarını göremediğini bildirdi; kök neden kodda bulunamadı (sahne
+içeriği doğru kurulu), en olası açıklama Play'e basılırken Editor'de `MultiplayerPrototype.unity`
+yerine `WorkshopPrototype.unity`'nin açık olmasıydı. Ayrıntılar ve adım adım test talimatı
+`docs/PROJECT_STATUS.md`'de. **Bu, oyunun bütün sistemlerinin multiplayer olduğu anlamına gelmez** — sadece
 oyuncu hareketi/kamerası (owner-authoritative `NetworkTransform`) senkronize edildi; eşya
 taşıma, üretim, sipariş, ekonomi ve makine yerleştirme hâlâ tamamen yerel/tek-oyunculu. Gerçek
 host-authoritative entegrasyon (sunucunun her işlemi doğrulaması) Aşama 18'de ele alınacak.

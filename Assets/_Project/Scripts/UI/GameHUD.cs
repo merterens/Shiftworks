@@ -24,6 +24,7 @@ namespace Shiftworks.UI
 
         private OrderState _lastSeenState = OrderState.Available;
         private float _notificationTimer;
+        private string _notificationMessage = "";
 
         private void Update()
         {
@@ -54,10 +55,19 @@ namespace Shiftworks.UI
 
             if (state == OrderState.Completed && _lastSeenState != OrderState.Completed)
             {
-                _notificationTimer = notificationDuration;
+                int reward = trackedOrder != null ? trackedOrder.Reward : 0;
+                ShowNotification($"Sipariş Tamamlandı! +{reward} $");
             }
 
             _lastSeenState = state;
+        }
+
+        /// <summary>Generic notification slot other systems (e.g. factory expansion
+        /// purchases) can reuse instead of duplicating their own toast/timer logic.</summary>
+        public void ShowNotification(string message)
+        {
+            _notificationMessage = message;
+            _notificationTimer = notificationDuration;
         }
 
         private void UpdateNotification()
@@ -71,8 +81,7 @@ namespace Shiftworks.UI
             {
                 _notificationTimer -= Time.deltaTime;
                 notificationText.enabled = true;
-                int reward = trackedOrder != null ? trackedOrder.Reward : 0;
-                notificationText.text = $"Sipariş Tamamlandı! +{reward} $";
+                notificationText.text = _notificationMessage;
             }
             else
             {

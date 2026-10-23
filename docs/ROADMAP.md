@@ -11,7 +11,7 @@ tamamlandığında `docs/PROJECT_STATUS.md` güncellenmelidir.
 | 4 | Konveyör bantları ve otomatik üretim hattı | ✅ Tamamlandı |
 | 5 | Sipariş, ekonomi, paketleme ve teslimat | ✅ Tamamlandı |
 | 6 | Makine satın alma ve yerleştirme | ✅ Tamamlandı |
-| 7 | Fabrika inşa ve genişletme (alan satın alma, duvar/zemin düzenleme) | ⏭️ Sıradaki (henüz başlanmadı) |
+| 7 | Fabrika genişletme — hazır üretim alanı satın alma ("Üretim Alanı B") | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
 | 8 | Yeni ürünler ve çok aşamalı üretim zincirleri | Planlandı |
 | 9 | Makine yükseltmeleri (hız/kalite/kapasite seviyeleri) | Planlandı |
 | 10 | Elektrik sistemi ve üretim verimliliği | Planlandı |
@@ -26,12 +26,15 @@ tamamlandığında `docs/PROJECT_STATUS.md` güncellenmelidir.
 | 19 | Steam entegrasyonu ve davet sistemi (Steamworks, lobi) | Planlandı |
 | 20 | Görsel cila, animasyon, ses tasarımı, optimizasyon ve Steam yayına hazırlık | Planlandı |
 
-## ✅ Multiplayer Üzerine Önemli Not (güncellendi)
-Aşama 6 civarında planlanan **küçük, iki oyunculu teknik ağ prototipi tamamlandı ve kullanıcı
-tarafından başarıyla test edildi** (Netcode for GameObjects + Unity Transport; host başlatma,
-client bağlanma, iki oyuncunun aynı odada birbirinin hareketini/dönüşünü görmesi doğrulandı).
-Ayrı bir `MultiplayerPrototype.unity` sahnesinde, `WorkshopPrototype.unity`'ye dokunulmadan
-uygulandı.
+## 🛠️ Multiplayer Üzerine Önemli Not (düzeltildi)
+Aşama 6 civarında planlanan **küçük, iki oyunculu teknik ağ prototipi geliştirildi** (Netcode
+for GameObjects + Unity Transport; Host Başlat/Client Bağlan/Bağlantıyı Kes test paneli). Ayrı
+bir `MultiplayerPrototype.unity` sahnesinde, `WorkshopPrototype.unity`'ye dokunulmadan uygulandı.
+
+⚠️ **Önceki not yanlıştı**: Burada daha önce "kullanıcı tarafından başarıyla test edildi"
+yazıyordu — kullanıcı test ekranında Host/Client butonlarını göremediğini bildirdi, yani bu
+doğrulama hiç yapılmamıştı. Durum **"geliştirildi — kullanıcı testi bekleniyor"** olarak
+düzeltildi. Kök neden araştırması ve adım adım test talimatı `docs/PROJECT_STATUS.md`'de.
 
 **Bu doğrulamanın kapsamı dar tutulmalıdır**: yalnızca oyuncu hareketi/kamerası senkronize
 edildi (owner-authoritative `NetworkTransform`). Eşya taşıma, üretim, konveyör, sipariş,
@@ -44,5 +47,9 @@ sistemleriyle (ekonomi/üretim/envanter) birlikte ele alınacak.
 - Sıralama kesin değildir; bağımlılıklara göre (örn. elektrik sisteminin makine yükseltmelerinden
   önce/sonra gelmesi) aşamalar arasında küçük kaymalar olabilir — bu, geliştirme ilerledikçe
   netleşecektir.
-- Aşama 7 kapsamı bu belgenin yazıldığı anda henüz detaylandırılmadı; "fabrika inşa ve
-  genişletme" başlığı kullanıcı tarafından verilen üst düzey hedeftir, henüz kod yazılmadı.
+- Aşama 7 kapsamı netleşti ve uygulandı: serbest/hibrit inşaat sistemi **bilinçli olarak bu
+  aşamada yapılmadı** — kullanıcı "A: Hazır üretim alanı satın alma" seçeneğini onayladı.
+  Modüler mimari (`FactoryExpansionDefinition`/`Manager`/`Gate`/`Terminal`) ileride
+  Üretim Alanı C/D gibi yeni salonların yalnızca yeni bir veri asset'i + sahne kurulumu
+  olarak eklenmesine izin verecek şekilde tasarlandı; kod tekrar yazılmadan genişletilebilir.
+  Ayrıntılar için `docs/PROJECT_STATUS.md`.

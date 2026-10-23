@@ -2642,6 +2642,7 @@ MonoBehaviour:
   disconnectButton: {fileID: 846282527}
   statusText: {fileID: 638547196}
   port: 7777
+  transientMessageDuration: 3
 --- !u!114 &2055255067
 MonoBehaviour:
   m_ObjectHideFlags: 0

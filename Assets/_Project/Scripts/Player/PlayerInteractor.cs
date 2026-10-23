@@ -1,5 +1,6 @@
 using Shiftworks.Conveyors;
 using Shiftworks.Core.Interaction;
+using Shiftworks.Factory;
 using Shiftworks.Items;
 using Shiftworks.Machines;
 using Shiftworks.Orders;
@@ -163,6 +164,12 @@ namespace Shiftworks.Player
                 return;
             }
 
+            if (_currentTarget is FactoryExpansionTerminal expansionTerminal)
+            {
+                HandleExpansionTerminalInteraction(expansionTerminal);
+                return;
+            }
+
             if (_currentTarget is PackingStation station)
             {
                 HandlePackingInteraction(station);
@@ -236,6 +243,12 @@ namespace Shiftworks.Player
                     _machinePlacementController.BeginPlacement(terminal.Definition, terminal.PurchaseManager);
                 }
             });
+        }
+
+        private void HandleExpansionTerminalInteraction(FactoryExpansionTerminal terminal)
+        {
+            SuspendForUI();
+            terminal.OpenPanel(ResumeFromUI);
         }
 
         private void HandlePackingInteraction(PackingStation station)
