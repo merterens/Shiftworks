@@ -32,6 +32,16 @@ namespace Shiftworks.Items
         /// </summary>
         public bool IsAutomated { get; private set; }
 
+        /// <summary>(Stage 11C-1) Defaults to true (no behavior change for single-player,
+        /// where nothing ever calls SetNetworkAvailability). In multiplayer, NetworkCarryableItem
+        /// mirrors whether the host-authoritative original of this item is already held/
+        /// automated into this flag on every OTHER client, so their own raycast-driven
+        /// CanInteract check (and therefore the "E - Al" prompt) correctly disables for an
+        /// item someone else is already holding — without this, a client's local CurrentHolder
+        /// would stay perpetually null (Interact() only ever actually runs on the host now)
+        /// and the prompt would incorrectly stay enabled forever.</summary>
+        private bool _networkAvailable = true;
+
         private Rigidbody _rigidbody;
         private Collider _collider;
         private string _cachedPrompt;
@@ -47,7 +57,14 @@ namespace Shiftworks.Items
 
         public bool CanInteract(IInteractor interactor)
         {
-            return !IsHeld && !IsAutomated;
+            return !IsHeld && !IsAutomated && _networkAvailable;
+        }
+
+        /// <summary>(Stage 11C-1) Called only by NetworkCarryableItem, never by gameplay code —
+        /// see the field's own doc comment.</summary>
+        public void SetNetworkAvailability(bool available)
+        {
+            _networkAvailable = available;
         }
 
         public void Interact(IInteractor interactor)
@@ -144,6 +161,23 @@ namespace Shiftworks.Items
         {
             if (!IsHeld)
             {
+                return;
+            }
+
+            // (Stage 11C bugfix) Secondary safety net — the real fix is
+            // NetworkPlayerSetup.OnNetworkDespawn now calling Drop() the moment a holder
+            // disconnects, which is what actually clears CurrentHolder. This check exists
+            // because IsHeld (CurrentHolder != null) can never detect that on its own:
+            // CurrentHolder is typed as the IInteractor INTERFACE, so that comparison is
+            // plain C# reference equality, not Unity's overridden "is the underlying
+            // GameObject destroyed" check — a holder whose GameObject was destroyed through
+            // some OTHER path this class doesn't know about would otherwise leave IsHeld
+            // true forever and spam MissingReferenceException here every physics step.
+            // HoldPoint is a real Transform reference, so this specific comparison DOES use
+            // Unity's safe null check.
+            if (CurrentHolder.HoldPoint == null)
+            {
+                Drop();
                 return;
             }
 

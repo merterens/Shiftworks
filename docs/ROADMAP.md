@@ -15,7 +15,7 @@ tamamlandığında `docs/PROJECT_STATUS.md` güncellenmelidir.
 | 8 | Elektrik kapasitesi, makine güç tüketimi ve üretim verimliliği | ✅ Tamamlandı (18/18 kullanıcı testi) |
 | 9 | Yeni ürünler, makineler ve çok aşamalı üretim (montaj makinesi, AssembledComponent) | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
 | 10 | Kayıt / yükleme sistemi (save/load) | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
-| 11 | Gerçek host-authoritative 2 oyunculu multiplayer co-op (Netcode/RPC entegrasyonu) | 🛠️ **11A onaylandı, 11B geliştirildi — kullanıcı testleri bekleniyor** (11C-11E planlandı) |
+| 11 | Gerçek host-authoritative 2 oyunculu multiplayer co-op (Netcode/RPC entegrasyonu) | 🛠️ **11A ve 11B onaylandı, 11C-1 geliştirildi — kullanıcı testleri bekleniyor** (11C-2, 11C-3, 11D-11E planlandı) |
 | 12 | Konveyör inşa modu (oyuncunun serbestçe hat kurması) | Planlandı |
 | 13 | Forklift ve lojistik (araçla taşıma, toplu nakliye) | Planlandı |
 | 14 | Gece-gündüz döngüsü ve vardiya sistemi | Planlandı |

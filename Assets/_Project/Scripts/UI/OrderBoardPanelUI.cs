@@ -1,4 +1,5 @@
 using System;
+using Shiftworks.Multiplayer;
 using Shiftworks.Orders;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -112,7 +113,22 @@ namespace Shiftworks.UI
                 return;
             }
 
-            bool success = _orderManager.TryAcceptOrder(_order);
+            // (Stage 11B) Route through NetworkEconomyBridge when present — see
+            // MachineShopPanelUI.OnBuyClicked for the full reasoning. Single-player keeps
+            // the exact original direct call.
+            NetworkEconomyBridge bridge = NetworkEconomyBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestOrderAccept(_order, HandleAcceptResult);
+                return;
+            }
+
+            HandleAcceptResult(_orderManager.TryAcceptOrder(_order),
+                "Sipariş kabul edilemedi — başka bir sipariş zaten aktif olabilir.");
+        }
+
+        private void HandleAcceptResult(bool success, string reason)
+        {
             if (!success && warningText != null)
             {
                 // Defensive: Refresh()'s own HasActiveOrder check already disables the button
@@ -120,7 +136,7 @@ namespace Shiftworks.UI
                 // does (e.g. a stale interactable state), the player still sees why nothing
                 // happened instead of a silent no-op.
                 warningText.enabled = true;
-                warningText.text = "Sipariş kabul edilemedi — başka bir sipariş zaten aktif olabilir.";
+                warningText.text = reason;
             }
 
             Refresh();

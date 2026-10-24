@@ -3,6 +3,7 @@ using Shiftworks.Core.Interaction;
 using Shiftworks.Factory;
 using Shiftworks.Items;
 using Shiftworks.Machines;
+using Shiftworks.Multiplayer;
 using Shiftworks.Orders;
 using Shiftworks.Power;
 using Shiftworks.UI;
@@ -266,9 +267,34 @@ namespace Shiftworks.Player
                 return;
             }
 
-            RequestInteraction(_currentTarget);
+            if (_currentTarget is CarryableItem item)
+            {
+                HandleItemPickup(item);
+            }
+        }
 
-            if (_currentTarget is CarryableItem item && item.CurrentHolder == (IInteractor)this)
+        /// <summary>(Stage 11C-1) Routes through NetworkItemInteractionBridge when present —
+        /// on the host this resolves synchronously below (identical to single-player); a
+        /// remote client's request goes through the host first, and _carriedItem is only
+        /// ever set once the host actually confirms the pickup (it can genuinely fail —
+        /// someone else got there first), never optimistically.</summary>
+        private void HandleItemPickup(CarryableItem item)
+        {
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestPickup(item, this, (success, reason) =>
+                {
+                    if (success)
+                    {
+                        _carriedItem = item;
+                    }
+                });
+                return;
+            }
+
+            RequestInteraction(item);
+            if (item.CurrentHolder == (IInteractor)this)
             {
                 _carriedItem = item;
             }
@@ -291,19 +317,69 @@ namespace Shiftworks.Player
 
             if (_carriedItem != null)
             {
-                if (machine.TryAcceptInput(_carriedItem))
-                {
-                    _carriedItem = null;
-                }
+                HandleMachineFeed(machine, _carriedItem);
                 return;
             }
 
-            if (machine.TryCollectOutput(this, out CarryableItem output))
+            HandleMachineCollect(machine);
+        }
+
+        /// <summary>(Stage 11C bugfix) Routes through NetworkItemInteractionBridge when
+        /// present — on the host this resolves synchronously below (identical to
+        /// single-player); a remote client's request goes through the host first, and
+        /// _carriedItem is only cleared once the host actually confirms the item was
+        /// consumed (it can genuinely be rejected — e.g. the machine filled up or stopped
+        /// being Idle the instant another player's own feed completed the batch first).</summary>
+        private void HandleMachineFeed(MachineController machine, CarryableItem item)
+        {
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
             {
-                _carriedItem = output;
+                bridge.RequestFeedMachine(machine, item, this, (success, reason) =>
+                {
+                    if (success && _carriedItem == item)
+                    {
+                        _carriedItem = null;
+                    }
+                });
+                return;
+            }
+
+            if (machine.TryAcceptInput(item))
+            {
+                _carriedItem = null;
             }
         }
 
+        /// <summary>(Stage 11C bugfix) Same reasoning as HandleMachineFeed — collection can
+        /// genuinely fail (someone else collected it first), so _carriedItem is only set
+        /// once the host confirms.</summary>
+        private void HandleMachineCollect(MachineController machine)
+        {
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestCollectOutput(machine, this, (success, output, reason) =>
+                {
+                    if (success)
+                    {
+                        _carriedItem = output;
+                    }
+                });
+                return;
+            }
+
+            if (machine.TryCollectOutput(this, out CarryableItem localOutput))
+            {
+                _carriedItem = localOutput;
+            }
+        }
+
+        /// <summary>(Stage 11C bugfix) Routes through NetworkItemInteractionBridge when
+        /// present — on the host this resolves synchronously (identical to single-player);
+        /// a remote client's request goes through the host first, and _carriedItem is only
+        /// ever set once the host actually confirms (and the withdrawn item's NetworkObject
+        /// is resolvable), never optimistically — same shape as HandleItemPickup.</summary>
         private void HandleStorageInteraction(OutputStorage storage)
         {
             if (_carriedItem != null)
@@ -312,9 +388,22 @@ namespace Shiftworks.Player
                 return;
             }
 
-            if (storage.TryWithdraw(this, out CarryableItem withdrawn))
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
             {
-                _carriedItem = withdrawn;
+                bridge.RequestWithdraw(this, (success, withdrawn, reason) =>
+                {
+                    if (success)
+                    {
+                        _carriedItem = withdrawn;
+                    }
+                });
+                return;
+            }
+
+            if (storage.TryWithdraw(this, out CarryableItem localWithdrawn))
+            {
+                _carriedItem = localWithdrawn;
             }
         }
 
@@ -348,6 +437,10 @@ namespace Shiftworks.Player
             terminal.OpenPanel(ResumeFromUI);
         }
 
+        /// <summary>(Stage 11C extension) Routes through NetworkItemInteractionBridge when
+        /// present — on the host this resolves synchronously (identical to single-player); a
+        /// remote client's request goes through the host first, and _carriedItem is only
+        /// cleared once the host actually confirms the item was consumed.</summary>
         private void HandlePackingInteraction(PackingStation station)
         {
             if (_carriedItem == null)
@@ -355,12 +448,27 @@ namespace Shiftworks.Player
                 return;
             }
 
-            if (station.TryPack(_carriedItem))
+            CarryableItem item = _carriedItem;
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestPack(item, this, (success, reason) =>
+                {
+                    if (success && _carriedItem == item)
+                    {
+                        _carriedItem = null;
+                    }
+                });
+                return;
+            }
+
+            if (station.TryPack(item))
             {
                 _carriedItem = null;
             }
         }
 
+        /// <summary>(Stage 11C extension) Same reasoning as HandlePackingInteraction.</summary>
         private void HandleShippingInteraction(ShippingZone zone)
         {
             if (_carriedItem == null)
@@ -368,7 +476,21 @@ namespace Shiftworks.Player
                 return;
             }
 
-            if (zone.TryDeliver(_carriedItem))
+            CarryableItem item = _carriedItem;
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestDeliver(item, this, (success, reason) =>
+                {
+                    if (success && _carriedItem == item)
+                    {
+                        _carriedItem = null;
+                    }
+                });
+                return;
+            }
+
+            if (zone.TryDeliver(item))
             {
                 _carriedItem = null;
             }
@@ -435,12 +557,37 @@ namespace Shiftworks.Player
             }
         }
 
-        // Local-only for now. This indirection is the seam where a future host RPC call
-        // (multiplayer interaction request) would be inserted without touching callers above.
+        // Local-only for non-CarryableItem targets (machines/stations/terminals never reach
+        // this call site any more — see HandleInteractKey — so this is now effectively
+        // dead in practice, kept only as a safety net for any IInteractable that isn't
+        // special-cased above).
         private void RequestInteraction(IInteractable target) => target.Interact(this);
 
-        private void RequestDrop(CarryableItem item) => item.Drop();
+        /// <summary>(Stage 11C-1) Routes through NetworkItemInteractionBridge when present —
+        /// fire-and-forget (see the bridge's own class doc comment for why Drop/Throw never
+        /// need a confirm round-trip the way pickup does).</summary>
+        private void RequestDrop(CarryableItem item)
+        {
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestDrop(item);
+                return;
+            }
 
-        private void RequestThrow(CarryableItem item, Vector3 velocity) => item.Throw(velocity);
+            item.Drop();
+        }
+
+        private void RequestThrow(CarryableItem item, Vector3 velocity)
+        {
+            NetworkItemInteractionBridge bridge = NetworkItemInteractionBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestThrow(item, velocity);
+                return;
+            }
+
+            item.Throw(velocity);
+        }
     }
 }

@@ -18,6 +18,14 @@ namespace Shiftworks.Orders
 
         public string InteractionPrompt => GetPromptFor(null);
 
+        /// <summary>(Stage 11C extension) The package SpawnReadyPackage most recently
+        /// created — read-only peek for NetworkItemInteractionBridge, so it can
+        /// NetworkObject.Spawn it the moment a host-authoritative TryPack call completes a
+        /// batch, the same "outside code only ever reads" rule as every other sync accessor
+        /// (MachineController.PendingOutput, etc.). Null/stale otherwise; the bridge only
+        /// ever reads it immediately after a TryPack call that just returned true.</summary>
+        public ShipmentPackage LastSpawnedPackage { get; private set; }
+
         public bool CanInteract(IInteractor interactor) => true;
 
         // Real packing goes through TryPack, called directly by PlayerInteractor (same
@@ -105,6 +113,7 @@ namespace Shiftworks.Orders
             }
 
             package.Initialize(order);
+            LastSpawnedPackage = package;
             Debug.Log($"[Shiftworks] Sevkiyat paketi oluşturuldu ve '{order.OrderName}' siparişine bağlandı.");
         }
     }

@@ -1,3 +1,5 @@
+using Shiftworks.Core.Interaction;
+using Shiftworks.Items;
 using Shiftworks.Player;
 using Unity.Netcode;
 using UnityEngine;
@@ -27,9 +29,18 @@ namespace Shiftworks.Multiplayer
         [SerializeField] private Camera playerCamera;
         [SerializeField] private AudioListener audioListener;
 
+        // (Stage 11 bugfix) Before this player's own camera is enabled below, the scene has
+        // no active camera at all (nothing else in WorkshopMultiplayer.unity is a camera) —
+        // Unity's "No cameras rendering" warning during that window is real, not cosmetic
+        // noise. ShiftworksWorkshopMultiplayerSetup.AddLobbyCameraFallback() adds the scene's
+        // one fallback camera that covers that window; found here by name since it's a scene
+        // singleton, not something a prefab asset can reference directly.
+        private const string LobbyCameraName = "LobbyCamera";
+
         public override void OnNetworkSpawn()
         {
             bool isLocal = IsOwner;
+            Debug.Log($"[Shiftworks][MP] NetworkPlayer spawn edildi. OwnerClientId={OwnerClientId}, isLocal={isLocal}.");
 
             if (firstPersonController != null)
             {
@@ -40,6 +51,10 @@ namespace Shiftworks.Multiplayer
             if (playerCamera != null)
             {
                 playerCamera.enabled = isLocal;
+                if (isLocal)
+                {
+                    Debug.Log("[Shiftworks][MP] Yerel kamera etkinleştirildi.");
+                }
             }
 
             if (audioListener != null)
@@ -64,6 +79,80 @@ namespace Shiftworks.Multiplayer
             if (placement != null)
             {
                 placement.enabled = isLocal;
+            }
+
+            if (isLocal)
+            {
+                SetLobbyCameraActive(false);
+                Debug.Log("[Shiftworks][MP] Oyuncu kontrolü etkinleştirildi (yerel oyuncu).");
+            }
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            if (IsOwner)
+            {
+                // Disconnected/scene-left while this was the local player — give the viewer
+                // back a working camera instead of a blank "No cameras rendering" screen.
+                SetLobbyCameraActive(true);
+            }
+
+            // (Stage 11C bugfix) Root cause of the repeating MissingReferenceException on
+            // CurrentHolder.HoldPoint: CarryableItem.Interact/Drop only ever run on the host
+            // now (11C-1's host-authoritative pickup), so a disconnecting/despawning
+            // player's CurrentHolder reference on whatever item they were holding was never
+            // cleared anywhere — the host's own FixedUpdate() kept chasing a HoldPoint
+            // Transform that no longer existed, forever, and the item itself stayed stuck
+            // "held" (IsHeld never false again) since nothing ever called Drop() on it.
+            // Only the host's own simulation holds authoritative CurrentHolder references
+            // (a client's own local copy of any item never has Interact() called on it at
+            // all, so this would be a no-op there even without the IsServer guard).
+            if (IsServer)
+            {
+                DropAnyItemHeldByThisPlayer();
+            }
+
+            Debug.Log($"[Shiftworks][MP] NetworkPlayer despawn edildi. OwnerClientId={OwnerClientId}.");
+        }
+
+        private void DropAnyItemHeldByThisPlayer()
+        {
+            PlayerInteractor interactor = GetComponent<PlayerInteractor>();
+            if (interactor == null)
+            {
+                return;
+            }
+
+            CarryableItem[] allItems = FindObjectsByType<CarryableItem>(FindObjectsSortMode.None);
+            foreach (CarryableItem item in allItems)
+            {
+                if (item.CurrentHolder == (IInteractor)interactor)
+                {
+                    item.Drop();
+                    Debug.Log($"[Shiftworks][MP] '{item.name}', bağlantısı kesilen oyuncunun elinden " +
+                        $"güvenli şekilde bırakıldı (OwnerClientId={OwnerClientId}).");
+                }
+            }
+        }
+
+        private static void SetLobbyCameraActive(bool active)
+        {
+            GameObject lobbyCameraGo = GameObject.Find(LobbyCameraName);
+            if (lobbyCameraGo == null)
+            {
+                return;
+            }
+
+            Camera lobbyCamera = lobbyCameraGo.GetComponent<Camera>();
+            if (lobbyCamera != null)
+            {
+                lobbyCamera.enabled = active;
+            }
+
+            AudioListener lobbyListener = lobbyCameraGo.GetComponent<AudioListener>();
+            if (lobbyListener != null)
+            {
+                lobbyListener.enabled = active;
             }
         }
     }

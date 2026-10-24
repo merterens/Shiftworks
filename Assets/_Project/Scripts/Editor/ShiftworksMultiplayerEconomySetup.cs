@@ -1,8 +1,11 @@
 using System.IO;
 using Shiftworks.Economy;
+using Shiftworks.Factory;
 using Shiftworks.Machines;
 using Shiftworks.Multiplayer;
+using Shiftworks.Orders;
 using Shiftworks.Player;
+using Shiftworks.Power;
 using Shiftworks.SaveSystem;
 using Shiftworks.UI;
 using Unity.Netcode;
@@ -15,13 +18,16 @@ using UnityEngine.UI;
 namespace Shiftworks.EditorTools
 {
     /// <summary>
-    /// (Stage 11B) Idempotent editor tooling for host-authoritative economy + machine
-    /// purchase/placement: adds PlayerInteractor + MachinePlacementController (self-contained,
-    /// built the exact same way ShiftworksInteractionSetup/ShiftworksMachineShopSetup already
-    /// build them on the single-player Player prefab) to the shared NetworkPlayer.prefab, adds
+    /// (Stage 11B, extended) Idempotent editor tooling for host-authoritative economy +
+    /// machine purchase/placement + factory expansion + power upgrade + active-order sync:
+    /// adds PlayerInteractor + MachinePlacementController (self-contained, built the exact
+    /// same way ShiftworksInteractionSetup/ShiftworksMachineShopSetup already build them on
+    /// the single-player Player prefab) to the shared NetworkPlayer.prefab, adds
     /// NetworkObject to the two purchasable machine prefabs so a host-spawned purchase is
-    /// visible to every client, and wires a NetworkEconomyBridge into WorkshopMultiplayer.unity.
-    /// Never touches WorkshopPrototype.unity, Player.prefab, or MultiplayerPrototype.unity.
+    /// visible to every client, and wires (or, on a re-run, retrofits newly-added references
+    /// onto) a single NetworkEconomyBridge into WorkshopMultiplayer.unity covering all five
+    /// systems. Never touches WorkshopPrototype.unity, Player.prefab, or
+    /// MultiplayerPrototype.unity.
     /// </summary>
     public static class ShiftworksMultiplayerEconomySetup
     {
@@ -39,11 +45,146 @@ namespace Shiftworks.EditorTools
         [MenuItem("Shiftworks/Setup/32. Add Network Economy Bridge To WorkshopMultiplayer Scene")]
         public static void AddNetworkEconomyBridgeMenuItem() => AddNetworkEconomyBridgeToScene();
 
+        [MenuItem("Shiftworks/Setup/37. Add NetworkMachineController To Machine Prefabs")]
+        public static void AddNetworkMachineControllerMenuItem() => AddNetworkMachineControllerToMachinePrefabs();
+
+        [MenuItem("Shiftworks/Setup/38. Add NetworkMachineController To Scene CuttingMachine")]
+        public static void AddNetworkMachineControllerToSceneMenuItem() => AddNetworkMachineControllerToSceneCuttingMachine();
+
         [MenuItem("Shiftworks/Setup/Apply Multiplayer Economy (Prefabs + Bridge)")]
         public static void ApplyMultiplayerEconomy()
         {
             AddInteractionToNetworkPlayerPrefab();
             AddNetworkEconomyBridgeToScene();
+            AddNetworkMachineControllerToMachinePrefabs();
+            AddNetworkMachineControllerToSceneCuttingMachine();
+        }
+
+        /// <summary>
+        /// (Stage 11C bugfix) CuttingMachine.prefab/AssemblyMachine.prefab already got a
+        /// NetworkObject in Stage 11B (for purchase/placement spawning) — this adds the
+        /// sibling NetworkMachineController that mirrors the running production cycle
+        /// (State/BufferedInputCount/ProcessingElapsed) so a second player can see and feed
+        /// a machine the first player already started, instead of each client simulating
+        /// the same physical machine independently and disagreeing about its state.
+        /// </summary>
+        private static void AddNetworkMachineControllerToMachinePrefabs()
+        {
+            AddNetworkMachineControllerToPrefab(CuttingMachinePrefabPath);
+            AddNetworkMachineControllerToPrefab(AssemblyMachinePrefabPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[Shiftworks] Makine prefab'larına üretim durumu senkronizasyonu eklendi.");
+        }
+
+        /// <summary>
+        /// (Stage 11C bugfix) The scene's one pre-placed CuttingMachine (built directly in
+        /// WorkshopMultiplayer.unity, not as a live prefab instance — m_PrefabInstance is
+        /// {fileID: 0} in the scene's own YAML, confirmed by reading it directly) never
+        /// received the NetworkObject/NetworkMachineController that
+        /// AddNetworkMachineControllerToMachinePrefabs adds to the two PURCHASABLE machine
+        /// PREFAB ASSETS — a prefab-asset change only propagates to scene objects that are
+        /// still connected prefab instances, and this one never was. Every item this
+        /// CuttingMachine ever produced was therefore never NetworkObject.Spawn'd (nothing
+        /// else in its component set ever called Spawn), which made RequestPickup AND
+        /// RequestFeedMachine in NetworkItemInteractionBridge both treat it as
+        /// "not a networked item yet" and silently fall back to a pure single-player call —
+        /// run entirely locally on whichever client happened to press the key, bypassing the
+        /// host even when the TARGET machine (e.g. a purchased AssemblyMachine) was itself
+        /// fully networked. This is the confirmed root cause of the reported CutMetalPart
+        /// 1/2-vs-0/2 host/client mismatch. Adds the two components directly onto the scene
+        /// GameObject by name (same approach as AddOutputStorageSync's OutputStorage) instead
+        /// of relying on prefab propagation.
+        /// </summary>
+        private const string SceneCuttingMachineName = "CuttingMachine";
+
+        private static void AddNetworkMachineControllerToSceneCuttingMachine()
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(WorkshopMultiplayerScenePath) == null)
+            {
+                Debug.LogError("[Shiftworks] WorkshopMultiplayer sahnesi bulunamadı (önce '29'/'30' çalıştırılmış olmalı).");
+                return;
+            }
+
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                Debug.LogWarning("[Shiftworks] İşlem iptal edildi: açık sahnede kaydedilmemiş değişiklikler vardı.");
+                return;
+            }
+
+            Scene scene = EditorSceneManager.OpenScene(WorkshopMultiplayerScenePath, OpenSceneMode.Single);
+
+            GameObject cuttingMachineGo = GameObject.Find(SceneCuttingMachineName);
+            if (cuttingMachineGo == null)
+            {
+                Debug.LogError("[Shiftworks] '" + SceneCuttingMachineName + "' sahnede bulunamadı.");
+                return;
+            }
+
+            MachineController machine = cuttingMachineGo.GetComponent<MachineController>();
+            NetworkMachineController networkMachine = cuttingMachineGo.GetComponent<NetworkMachineController>();
+            if (networkMachine == null)
+            {
+                if (cuttingMachineGo.GetComponent<NetworkObject>() == null)
+                {
+                    cuttingMachineGo.AddComponent<NetworkObject>();
+                }
+
+                networkMachine = cuttingMachineGo.AddComponent<NetworkMachineController>();
+                SerializedObject so = new SerializedObject(networkMachine);
+                so.FindProperty("machine").objectReferenceValue = machine;
+                so.ApplyModifiedProperties();
+                Debug.Log("[Shiftworks] Sahnedeki '" + SceneCuttingMachineName + "' makinesine host-authoritative üretim senkronizasyonu eklendi.");
+            }
+            else
+            {
+                Debug.Log("[Shiftworks] Sahnedeki '" + SceneCuttingMachineName + "' makinesinde ağ senkronizasyonu zaten var, dokunulmadı.");
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log("[Shiftworks] WorkshopMultiplayer sahnesindeki önceden yerleştirilmiş makine artık ağ üzerinden senkronize.");
+        }
+
+        private static void AddNetworkMachineControllerToPrefab(string prefabPath)
+        {
+            GameObject prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefabAsset == null)
+            {
+                Debug.LogError("[Shiftworks] Makine prefabı bulunamadı: " + prefabPath);
+                return;
+            }
+
+            if (prefabAsset.GetComponent<NetworkMachineController>() != null)
+            {
+                Debug.Log("[Shiftworks] '" + prefabPath + "' zaten NetworkMachineController içeriyor, dokunulmadı.");
+                return;
+            }
+
+            if (prefabAsset.GetComponent<NetworkObject>() == null)
+            {
+                Debug.LogError("[Shiftworks] '" + prefabPath + "' henüz NetworkObject içermiyor " +
+                    "(önce '32. Add Network Economy Bridge To WorkshopMultiplayer Scene' çalıştırılmış olmalı).");
+                return;
+            }
+
+            GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                MachineController machine = root.GetComponent<MachineController>();
+                NetworkMachineController networkMachine = root.AddComponent<NetworkMachineController>();
+                SerializedObject so = new SerializedObject(networkMachine);
+                so.FindProperty("machine").objectReferenceValue = machine;
+                so.ApplyModifiedProperties();
+
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                Debug.Log("[Shiftworks] NetworkMachineController eklendi: " + prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>
@@ -218,47 +359,68 @@ namespace Shiftworks.EditorTools
                 networkManager.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(prefabsList);
             }
 
-            if (GameObject.Find("NetworkEconomyBridge") != null)
+            GameObject economyGo = GameObject.Find("EconomyManager");
+            GameObject purchaseManagerGo = GameObject.Find("MachinePurchaseManager");
+            GameObject catalogGo = GameObject.Find("SaveCatalog");
+            GameObject expansionManagerGo = GameObject.Find("FactoryExpansionManager");
+            GameObject powerManagerGo = GameObject.Find("PowerManager");
+            GameObject orderManagerGo = GameObject.Find("OrderManager");
+
+            EconomyManager economy = economyGo != null ? economyGo.GetComponent<EconomyManager>() : null;
+            MachinePurchaseManager purchaseManager = purchaseManagerGo != null ? purchaseManagerGo.GetComponent<MachinePurchaseManager>() : null;
+            SaveCatalog catalog = catalogGo != null ? catalogGo.GetComponent<SaveCatalog>() : null;
+            FactoryExpansionManager expansionManager = expansionManagerGo != null ? expansionManagerGo.GetComponent<FactoryExpansionManager>() : null;
+            PowerManager powerManager = powerManagerGo != null ? powerManagerGo.GetComponent<PowerManager>() : null;
+            OrderManager orderManager = orderManagerGo != null ? orderManagerGo.GetComponent<OrderManager>() : null;
+
+            if (economy == null || purchaseManager == null || catalog == null
+                || expansionManager == null || powerManager == null || orderManager == null)
             {
-                Debug.Log("[Shiftworks] NetworkEconomyBridge zaten sahnede var, dokunulmadı.");
+                Debug.LogError("[Shiftworks] EconomyManager/MachinePurchaseManager/SaveCatalog/FactoryExpansionManager/" +
+                    "PowerManager/OrderManager sahnede bulunamadı (hepsi Aşama 5-10 kurulumlarıyla gelmiş olmalı — " +
+                    "SaveCatalog için önce '28. Add Save System To Scene' çalıştırılmış olmalı).");
+                return;
             }
-            else
+
+            GameObject bridgeGo = GameObject.Find("NetworkEconomyBridge");
+            bool bridgeIsNew = bridgeGo == null;
+            if (bridgeIsNew)
             {
-                GameObject economyGo = GameObject.Find("EconomyManager");
-                GameObject purchaseManagerGo = GameObject.Find("MachinePurchaseManager");
-                GameObject catalogGo = GameObject.Find("SaveCatalog");
-
-                EconomyManager economy = economyGo != null ? economyGo.GetComponent<EconomyManager>() : null;
-                MachinePurchaseManager purchaseManager = purchaseManagerGo != null ? purchaseManagerGo.GetComponent<MachinePurchaseManager>() : null;
-                SaveCatalog catalog = catalogGo != null ? catalogGo.GetComponent<SaveCatalog>() : null;
-
-                if (economy == null || purchaseManager == null || catalog == null)
-                {
-                    Debug.LogError("[Shiftworks] EconomyManager/MachinePurchaseManager/SaveCatalog sahnede bulunamadı " +
-                        "(SaveCatalog için önce '28. Add Save System To Scene' çalıştırılmış olmalı).");
-                    return;
-                }
-
                 // Its own GameObject (not NetworkManager's) — an in-scene placed NetworkObject
                 // is spawned automatically by NetworkManager's own start sweep
                 // (ServerSpawnSceneObjectsOnStartSweep), so it does not need to live on the
                 // same GameObject as NetworkManager itself to work.
-                GameObject bridgeGo = new GameObject("NetworkEconomyBridge");
+                bridgeGo = new GameObject("NetworkEconomyBridge");
                 bridgeGo.AddComponent<NetworkObject>();
-
-                NetworkEconomyBridge bridge = bridgeGo.AddComponent<NetworkEconomyBridge>();
-                SerializedObject bridgeSo = new SerializedObject(bridge);
-                bridgeSo.FindProperty("economyManager").objectReferenceValue = economy;
-                bridgeSo.FindProperty("purchaseManager").objectReferenceValue = purchaseManager;
-                bridgeSo.FindProperty("catalog").objectReferenceValue = catalog;
-                bridgeSo.ApplyModifiedProperties();
             }
+
+            NetworkEconomyBridge bridge = bridgeGo.GetComponent<NetworkEconomyBridge>();
+            if (bridge == null)
+            {
+                bridge = bridgeGo.AddComponent<NetworkEconomyBridge>();
+            }
+
+            // Re-wiring every reference unconditionally (not just on first creation) lets this
+            // menu retrofit newly-added fields — factoryExpansionManager/powerManager/
+            // orderManager — onto a bridge that was already created by an earlier run.
+            SerializedObject bridgeSo = new SerializedObject(bridge);
+            bridgeSo.FindProperty("economyManager").objectReferenceValue = economy;
+            bridgeSo.FindProperty("purchaseManager").objectReferenceValue = purchaseManager;
+            bridgeSo.FindProperty("catalog").objectReferenceValue = catalog;
+            bridgeSo.FindProperty("factoryExpansionManager").objectReferenceValue = expansionManager;
+            bridgeSo.FindProperty("powerManager").objectReferenceValue = powerManager;
+            bridgeSo.FindProperty("orderManager").objectReferenceValue = orderManager;
+            bridgeSo.ApplyModifiedProperties();
+
+            Debug.Log(bridgeIsNew
+                ? "[Shiftworks] NetworkEconomyBridge sahneye eklendi."
+                : "[Shiftworks] NetworkEconomyBridge zaten sahnedeydi — referanslar (yeni alanlar dahil) güncellendi.");
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("[Shiftworks] WorkshopMultiplayer sahnesine host-authoritative ekonomi/makine köprüsü eklendi.");
+            Debug.Log("[Shiftworks] WorkshopMultiplayer sahnesine host-authoritative ekonomi/makine/genişletme/elektrik/sipariş köprüsü eklendi.");
         }
 
         private static GameObject AddNetworkObjectToPrefab(string prefabPath)

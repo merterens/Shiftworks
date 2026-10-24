@@ -18,8 +18,33 @@ kullanıcının isteğiyle **11A-11E** alt aşamalarına bölündü. **11A** (ik
 fabrikaya bağlanıp hareket etmesi) geliştirildi ve **kullanıcı tarafından Unity'de test edilip
 onaylandı** (iki oyuncu bağlandı, farklı noktalarda doğdu, birbirinin hareketini gördü).
 Bunun üzerine **11B** (ekonomi + makine satın alma/yerleştirmenin host-authoritative hale
-gelmesi) **geliştirildi — kullanıcı testleri bekleniyor.** Ayrıntılar "Aşama 11A Mimarisi" ve
-"Aşama 11B Mimarisi" bölümlerinde._
+gelmesi) **geliştirildi — kullanıcı testleri bekleniyor.** Kullanıcı multiplayer testinde
+bağlantı/kamera hatası bildirdi; teşhiste **11B'nin kurulum menülerinin (31-32) hiç
+çalıştırılmadığı** ortaya çıktı — yani hata 11B'den değil, hâlâ sadece 11A'nın kurulu olduğu
+sahneden kaynaklanıyor. Gerçek, doğrulanabilir sorun bulundu ve düzeltildi (oyuncu doğana kadar
+sahnede etkin kamera yoktu); bağlantı zincirine teşhis logları eklendi. Ayrıntılar "Aşama 11 —
+Bağlantı ve Kamera Hatası Teşhisi/Düzeltmesi" bölümünde. Bağlantı sonra başarıyla kuruldu, ama
+**client bir makine satın alırken donuyordu** — kök neden kesin doğrulanamadı ama gerçek bir
+dayanıklılık açığı bulundu ve düzeltildi (host RPC'leri try/catch'siz, başarısızlıkta client'a
+hiç yanıt gitmiyordu → sonsuz bekleme). Ayrıntılar "Aşama 11B — Client Satın Alma Çökme/Donma
+Hatası Teşhisi/Düzeltmesi" bölümünde. Kullanıcının paylaştığı Player.log ile **asıl kök neden
+kesinleşti**: `MultiplayerConnectionUI.OnEnable()`, `NetworkManager.Singleton`'a (ki o da
+NetworkManager'ın kendi `OnEnable()`'ında atanıyor — Unity farklı nesnelerin `OnEnable()`
+sırasını garanti etmez) bazen hiç abone olamıyordu; bağlantı GERÇEKTEN kuruluyordu ama UI
+bundan haberdar olmuyor, 8s'lik izleyici başarılı bağlantıyı yanlışlıkla `Shutdown()`
+ediyordu. Abonelik `Start()`'a taşınarak düzeltildi (Unity: tüm `OnEnable()`'lar tüm
+`Start()`'lardan önce biter — sıralama artık garanti). Ayrıntılar "Aşama 11B — Gerçek Kök
+Neden Bulundu" bölümünde. Bağlantı/satın alma onaylandıktan sonra kullanıcı 3 eksik
+senkronizasyon bildirdi (fabrika genişletme, elektrik yükseltme, aktif sipariş) —
+`NetworkEconomyBridge` aynı dört parçalı desenle bu üçünü de kapsayacak şekilde genişletildi
+(ayrıntı "Aşama 11B Genişletmesi" bölümünde, ardından bir NullReferenceException bulundu ve
+düzeltildi — "Aşama 11B Genişletmesi — NullReferenceException Düzeltmesi"). **Aşama 11B
+artık kullanıcı tarafından tam onaylandı** (bağlantı, ortak para, makine satın alma/
+yerleştirme, fabrika genişletme, elektrik yükseltme, ortak sipariş kabul). Bunun üzerine
+**Aşama 11C** başladı, **11C-1/11C-2/11C-3** alt aşamalarına bölündü; bu oturumda **yalnızca
+11C-1** (ortak eşya alma/taşıma/bırakma/fırlatma) **geliştirildi — kullanıcı testleri
+bekleniyor.** Ayrıntılar "Aşama 11C-1 Mimarisi" bölümünde.
+Ayrıntılar "Aşama 11A Mimarisi" ve "Aşama 11B Mimarisi" bölümlerinde._
 
 ⚠️ **Düzeltme**: Bu dosya daha önce iki oyunculu multiplayer teknik prototipinin "kullanıcı
 tarafından başarıyla test edildiğini" söylüyordu. Bu **yanlıştı** — kullanıcı, test ekranında
@@ -43,7 +68,8 @@ neden araştırması ve adım adım test talimatı aşağıda, "Multiplayer Test
 | 9 | Yeni ürünler, makineler ve çok aşamalı üretim (montaj makinesi) | ✅ **Tamamlandı (22/22 kullanıcı testi)** |
 | 10 | Kayıt / yükleme sistemi (save/load) | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
 | 11A | Gerçek multiplayer co-op — bağlantı + hareket (host-authoritative hedefine ilk adım) | ✅ **Kullanıcı tarafından test edildi ve onaylandı** |
-| 11B | Ekonomi + makine satın alma/yerleştirme — host-authoritative | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
+| 11B | Ekonomi + makine satın alma/yerleştirme + fabrika genişletme + elektrik yükseltme + sipariş kabul — host-authoritative | ✅ **Kullanıcı tarafından test edildi ve onaylandı** |
+| 11C-1 | Ortak eşya alma/taşıma/bırakma/fırlatma — host-authoritative | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
 
 Kullanıcı tarafından onaylanan test sonuçları: Aşama 1 (7/7), Aşama 2 (4/4 + hız/kaybolma hata
 düzeltmesi), Aşama 3 (11/11), Aşama 4 (11/11), Aşama 5 (ilk uygulama + 9/9 hata düzeltme testi),
@@ -967,6 +993,738 @@ imleci serbest bırak") devreye giriyor; Aşama 11E'ye kadar bu böyle kalacak.
    hâlâ sorunsuz çalıştığını doğrulayın.
 10. (İsteğe bağlı) Eşya taşımanın (G) her oyuncunun kendi ekranında çalıştığını ama diğer
     oyuncuya görünmediğini gözlemleyin — bu, belgelenen bilinçli sınır, hata değil.
+
+## Aşama 11 — Bağlantı ve Kamera Hatası Teşhisi/Düzeltmesi (11B testinden ÖNCE bulundu)
+
+Kullanıcı multiplayer testinde şu belirtileri bildirdi: Client bağlantı ekranında takılabiliyor,
+Editor Game penceresinde zaman zaman "Display 1 — No cameras rendering" uyarısı, client
+bağlandığında oyuncu kontrolü çalışmıyor, bir süre sonra bağlantı başarısız oluyor gibi.
+
+**Önemli teşhis bulgusu**: İnceleme sırasında `NetworkPlayer.prefab`'ın son değişim tarihinin
+Aşama 11A'dan (23 Ekim) kaldığı, sahnede `NetworkEconomyBridge`'in, `CuttingMachine.prefab`'da
+`NetworkObject`'in **bulunmadığı** ve `git status`'un hiçbir fark göstermediği görüldü — yani
+**Aşama 11B'nin kurulum menüleri (31, 32) hiç çalıştırılmamış**. Kullanıcının bildirdiği hata
+11B'nin kodundan değil, **hâlâ sadece Aşama 11A'nın kurulu olduğu sahneden** kaynaklanıyor —
+11B'nin kendi script'leri (`NetworkEconomyBridge` vb.) proje içinde var ama sahneye/prefab'a
+henüz hiç kablolanmamış, dolayısıyla bu bugdan sorumlu olamazlar.
+
+**Bulunan gerçek, doğrulanabilir sorun**: `WorkshopMultiplayer.unity`'de, bir oyuncu doğana
+kadar (host'un kendi oyuncusu dahil) sahnede **etkin hiçbir kamera yok** — her
+`NetworkPlayer.prefab` örneğinin kendi kamerası varsayılan olarak kapalı başlıyor ve sadece
+`NetworkPlayerSetup.OnNetworkSpawn`'da sahibi için açılıyor. Bu pencere boyunca Unity'nin
+"No cameras rendering" uyarısı **gerçek ve beklenen** bir durumdu — kozmetik gürültü değil.
+Bağlantının "takılı" görünmesinin bir kısmı da muhtemelen bundandı: ekran siyah olunca
+kontrolün çalışıp çalışmadığı anlaşılamıyor. Bağlantının kendisinin neden başarısız olduğuna
+dair kesin bir derleyici/mantık hatası kodda bulunamadı (NetworkManager/UnityTransport/
+MultiplayerConnectionUI/MultiplayerSpawnPoints incelendi, hepsi doğru görünüyor;
+`EditorBuildSettings.asset` da doğru sahneyi gösteriyor) — bu yüzden en küçük güvenli düzeltme
+uygulandı ve **tüm bağlantı/spawn zincirine teşhis logları eklendi**, bir sonraki test
+denemesinde tam başarısızlık noktasını kesin olarak görebilmek için.
+
+**Yapılan değişiklikler**:
+- Yeni: `Shiftworks/Setup/33. Add Lobby Camera Fallback To WorkshopMultiplayer Scene` menüsü
+  — sahneye her zaman açık bir `LobbyCamera` (+ `AudioListener`) ekler. `NetworkPlayerSetup`
+  artık yerel oyuncu doğduğunda bunu kapatıyor, oyuncu despawn olduğunda (bağlantı kesilince)
+  geri açıyor — asla gerçek bir oyuncu kamerasıyla aynı anda ikisi birden açık olmuyor.
+- `NetworkPlayerSetup.cs`: `OnNetworkSpawn`/yeni `OnNetworkDespawn`'a istenen teşhis logları
+  eklendi ("NetworkPlayer spawn edildi", "Yerel kamera etkinleştirildi", "Oyuncu kontrolü
+  etkinleştirildi", "NetworkPlayer despawn edildi").
+- `MultiplayerConnectionUI.cs`: Host başlatma/Client bağlantı isteği/Client bağlandı/
+  bağlantı kesildi-reddedildi/sunucu durduruldu için loglar eklendi.
+  `NetworkManager.DisconnectReason` artık okunup hata mesajına ekleniyor (önceden her
+  zaman sabit "Host bulunamadı" yazıyordu — şimdi gerçek sebep biliniyorsa gösteriliyor).
+- `MultiplayerSpawnPoints.cs`: Her bağlantı onayı için hangi spawn noktasının atandığını
+  loglayan bir satır eklendi.
+
+**Kullanıcıya düşen adımlar (rapor sonunda da tekrarlandı)**: Bu düzeltme sahneye yeni bir
+GameObject eklediği için `WorkshopMultiplayer.unity` yeniden kaydedilmeli (menü 33) ve
+**yeni bir Windows build alınmalı**. Sorun bu düzeltmeyle çözülmese bile, artık Console'da
+tam olarak hangi adımda (host başlatma / client isteği / onay / spawn / kamera) durduğu
+görülebilecek — bir sonraki denemenin logları paylaşılırsa kök neden kesinleştirilebilir.
+**Aşama 11B hâlâ "tamamlandı" işaretlenmedi** — kullanıcının isteği doğrultusunda, hem 11B'nin
+kendi kurulumu (menü 31-32) hem de bu bağlantı/kamera düzeltmesi kullanıcı tarafından test
+edilip onaylanmadan sonraki aşamaya geçilmeyecek.
+
+## Aşama 11B — Client Satın Alma Çökme/Donma Hatası Teşhisi/Düzeltmesi
+
+Önceki düzeltmeden sonra kullanıcı bağlantıyı başarıyla kurdu (host/client çalıştı), ama
+**client tarafında bir makine satın alırken client donuyor/çalışamaz hale geliyor**du.
+
+**Teşhis**: `EconomyManager`, `MachinePurchaseManager`, `MachineController.Awake` (PowerManager
+kaydı), `NetworkEconomyBridge`'in tüm RPC zinciri, satın alma/yerleştirme aşamaları ayrı ayrı
+satır satır incelendi. **Kesin, tek bir istisna kodda doğrulanamadı** (Unity çalıştırılıp
+gerçek bir stack trace görülmeden bu mümkün değil) — ama incelemede **gerçek, doğrulanabilir
+bir dayanıklılık açığı** bulundu: `RequestPurchaseServerRpc`/`RequestPlacementServerRpc`
+(host'ta çalışan RPC metotları) hiçbir try/catch içermiyordu. Host tarafında çalıştırma
+sırasında (örn. `Instantiate`/`MachineController.Awake`/`NetworkObject.Spawn` zincirinde)
+HERHANGİ bir istisna fırlasaydı, RPC metodu `NotifyPurchaseResultClientRpc`/
+`NotifyPlacementResultClientRpc`'yi hiç çağırmadan sonlanırdı — bu da isteği gönderen
+**client'ı sonsuza kadar yanıt bekler halde bırakırdı** (`_pendingPurchaseCallback`/
+`_pendingPlacementCallback` hiç tetiklenmez, `MachinePlacementController._waitingForNetworkResult`
+hiç `false` olmaz). Bu tam olarak "satın alma sırasında client donuyor" belirtisiyle örtüşüyor.
+Host tarafında bu istisna Console'a yazılırdı ama **client'a hiç bildirilmezdi** — kullanıcının
+bunu "çöktü" olarak yorumlaması tutarlı.
+
+**Yapılan düzeltme (NetworkEconomyBridge.cs)**:
+- `RequestPurchaseServerRpc`/`RequestPlacementServerRpc` artık **try/catch** içinde — host
+  tarafında ne olursa olsun (istisna dahil) client'a **her zaman** bir `ClientRpc` yanıtı
+  gider (istisna durumunda `success=false` + Console'a tam stack trace log'lanır).
+- **İkinci, bağımsız güvenlik ağı**: client tarafında `_pendingPurchaseCallback`/
+  `_pendingPlacementCallback` 6 saniye içinde yanıtlanmazsa (yanıt paketi kaybolsa/host
+  çökse bile), istemci kendini otomatik olarak "Host yanıt vermedi" hatasıyla kurtarır —
+  asla sonsuza kadar beklemez.
+- `ExecutePlacementOnServer`'a `definition.MachinePrefab == null` koruması eklendi (yanlış
+  yapılandırılmış bir makine tanımı artık sessizce patlamak yerine açıkça loglanıp bekleyen
+  sayısını geri ekliyor).
+- Satın alma/yerleştirme zincirinin her adımına (istek gönderildi, host sonucu, client'a
+  gelen yanıt, NetworkObject.Spawn) `[Shiftworks][MP]` loğu eklendi.
+
+**Kullanıcıya düşen adımlar**: Bu değişiklik sadece script, sahne/prefab'a dokunmadı — yine
+de **yeni bir Windows build gerekiyor** (derlenen kod değişti). Sorun TEKRARLANIRSA, artık
+host'un Unity Editor Console'unda **tam istisna ve stack trace** görünecek (önceden sessizce
+yutuluyordu) — bu, kök nedeni kesinleştirmek için yeterli olacak. Ayrıca Windows build'in
+kendi log dosyası `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Shiftworks6\Player.log`'da
+(bu proje `companyName: DefaultCompany`, `productName: Shiftworks6` kullanıyor) — Notepad ile
+açılabilir, en alttaki satırlar en son olaylardır.
+
+**Aşama 11B hâlâ "tamamlandı" işaretlenmedi.**
+
+## Aşama 11B — Gerçek Kök Neden Bulundu: Bağlantı Zaman Aşımı Mekanizması Başarılı Bağlantıyı Kesiyordu
+
+Kullanıcı Windows client'ın `Player.log`'unu paylaştı — bu, önceki iki raporun ("client donuyor")
+**asıl, tek ve kesin kök nedenini** ortaya çıkardı. Log sırası: `StartClient çağrıldı` →
+**her iki `NetworkPlayer` başarıyla spawn oldu** → **yerel kamera etkinleştirildi** →
+**oyuncu kontrolü etkinleştirildi** → (her şey çalışırken) **8 saniye sonra "host hiç yanıt
+vermedi" zaman aşımı tetiklendi** → bağlantı kapatıldı (her iki oyuncu despawn oldu).
+
+**Kesin kök neden**: `MultiplayerConnectionUI.OnEnable()` içinde `NetworkManager.Singleton`'a
+abone oluyordu (`OnClientConnectedCallback` vb.), ama kurulu Netcode paketinin kaynağı
+doğrulandı: **`NetworkManager.Singleton` NetworkManager'ın KENDİ `Awake()`'inde değil,
+`OnEnable()`'ında atanıyor** (`NetworkManager.cs:1093-1096`). Unity, bir sahnedeki TÜM
+nesnelerin `Awake()`'inin TÜM `OnEnable()`'lardan önce çalışacağını garanti eder, ama
+**farklı GameObject'lerin `OnEnable()`'ları arasında sıra garantisi vermez**. Bu sahnede
+`MultiplayerConnectionUI`'ın Canvas'ı ile `NetworkManager`'ın GameObject'i ayrı nesneler —
+Unity'nin hangisinin `OnEnable()`'ını önce çalıştıracağı tanımsız. Eğer Canvas'ınki önce
+çalışırsa, `NetworkManager.Singleton` o anda hâlâ `null` olur, erken `return` abonelikleri
+**hiç kaydetmez** ve bir daha asla denenmez (`OnEnable` sadece bir kez çalışır). Sonuç:
+bağlantı **gerçekten** kuruluyordu (NGO'nun kendi iç spawn mekanizması bu aboneliklere
+bağımlı değil) ama `MultiplayerConnectionUI` bundan **hiç haberdar olmuyordu** —
+`_clientConnectAttemptPending` hep `true` kalıyordu, 8s'lik İzleyici (watchdog) bunu
+"bağlantı hiç kurulmadı" sanıp **çalışan bağlantıyı `Shutdown()` ile kesiyordu**. Önceki
+"satın alma sırasında donma" raporu da muhtemelen aynı hatanın bir tezahürüydü — oyuncu
+makineyi tam ~8. saniye civarında satın almaya çalışırken bağlantının kendisi kesiliyordu.
+
+**Düzeltme (tek dosya, `MultiplayerConnectionUI.cs`)**: Abonelik `OnEnable()`'dan
+**`Start()`'a** taşındı. Unity'nin garantisi şu: sahnedeki TÜM nesnelerin `OnEnable()`'ı,
+HERHANGİ bir nesnenin `Start()`'ından önce çalışır — yani `MultiplayerConnectionUI.Start()`
+çalıştığında `NetworkManager.OnEnable()` (ve dolayısıyla `Singleton` ataması) **kesinlikle
+tamamlanmış** olur, hangi nesnenin önce enable olduğuna bakılmaksızın. `_subscribed` bayrağı
+çift-abonelik/çift-iptal riskini engelliyor. `OnDisable()` artık sadece gerçekten abone
+olunduysa iptal ediyor.
+
+**Kullanıcıya düşen adımlar**: Sadece script değişti — **yeni bir Windows build gerekiyor**.
+Bu düzeltmeyle artık: bağlantı kurulduğunda durum "Client bağlı"ya geçmeli, 8 saniye sonra
+**hiçbir şey kesilmemeli**, ve makine satın alma/yerleştirme artık bağlantı koptuğu için değil
+gerçek sonucuna göre çalışmalı.
+
+**Aşama 11B hâlâ "tamamlandı" işaretlenmedi.**
+
+## Aşama 11B Genişletmesi — Fabrika Genişletme / Elektrik Yükseltme / Aktif Sipariş Senkronizasyonu
+
+Bağlantı ve makine satın alma/yerleştirme çalıştıktan sonra kullanıcı üç eksik senkronizasyon
+bildirdi: fabrika genişletmesi, elektrik kapasite yükseltmesi, aktif sipariş kabul — hepsi
+client'ta yapıldığında host'a (veya tersine) yansımıyordu.
+
+**Ön inceleme bulgusu**: Üçünün de kendi `TryPurchase`/`TryPurchaseUpgrade`/`TryAcceptOrder`
+metodu zaten `MachinePurchaseManager.TryPurchase` ile **birebir aynı** atomik-tek-yetkili
+desende yazılmıştı (hatta `FactoryExpansionManager`'ın kendi yorum satırı "this purchase
+boundary is the seam a future host-authoritative RPC would wrap, same pattern as
+MachinePurchaseManager.TryPurchase" diyordu) — sadece henüz `NetworkEconomyBridge`'e
+bağlanmamışlardı. Üç sistemin UI'ları (`FactoryExpansionPanelUI.OnBuyClicked`,
+`PowerPanelUI.OnUpgradeClicked`, `OrderBoardPanelUI.OnAcceptClicked`) hâlâ kendi
+manager'larını **doğrudan** çağırıyordu — her client bunu sadece kendi yerel kopyasında
+yapıyordu, host hiç haberdar olmuyordu.
+
+**Yapılan değişiklik — `NetworkEconomyBridge.cs`'e üç yeni sistem eklendi** (aynı dört parçalı
+desenin tekrarı: bir `NetworkVariable`/`NetworkList` tek yönlü ayna + senkron host yolu +
+`ServerRpc` + hedefli `ClientRpc`, makine satın alma ile birebir aynı try/catch + 6s zaman
+aşımı güvenlik ağı dahil):
+- **Fabrika genişletmesi**: `NetworkList<bool>`, `SaveCatalog.AllExpansions` sırasına göre
+  indeksli. İstemci tarafında yeni `true` olan bir girdi `FactoryExpansionManager.
+  RestoreUnlocked`'a uygulanıyor — bu metot zaten `ExpansionUnlocked` olayını fırlatıyor,
+  yani `FactoryExpansionGate` **hiç değiştirilmeden** kendi mevcut tepki yoluyla açılıyor.
+- **Elektrik yükseltmesi**: Tek bir `NetworkVariable<bool>` (`IsUpgradePurchased` — şu an
+  tek seviye var). `PowerManager.RestoreUpgradeState` ile uygulanıyor. **Not**: Sadece
+  TOPLAM kapasite (`TotalCapacityKw`) senkronize — her makinenin gerçek anlık güç tüketimi/
+  tahsisi (`UsedCapacityKw`) hâlâ yerel (üretim durumu senkronizasyonuyla birlikte Aşama 11C'de
+  ele alınacak, kullanıcının "üretim durumu senkronize değil" şeklinde zaten kabul ettiği
+  sınırla aynı).
+- **Aktif sipariş**: `NetworkVariable<int>` — `OrderManager.AvailableOrders` sırasına göre
+  indeks (-1 = yok). Host tarafında her `Update()`'te host'un gerçek aktif siparişiyle
+  karşılaştırılıp senkronize ediliyor (bu sayede sipariş yerel olarak tamamlandığında da
+  otomatik sıfırlanıyor). İstemci tarafında yeni bir indekse geçildiğinde `OrderManager.
+  RestoreOrderState(sipariş, Active, 0, false)` uygulanıyor. **Bilinçli olarak YAPILMAYAN**:
+  paketleme ilerlemesi/tamamlama/sevkiyat senkronize edilmiyor (kullanıcının kendi talimatı
+  gereği) — sadece "hangi sipariş aktif" senkronize.
+
+**Değiştirilen/eklenen dosyalar**: `NetworkEconomyBridge.cs` (genişletildi),
+`FactoryExpansionPanelUI.cs`/`PowerPanelUI.cs`/`OrderBoardPanelUI.cs` (satın alma/kabul
+butonları köprü varsa onu kullanıyor — tek oyunculu davranış değişmedi),
+`ShiftworksMultiplayerEconomySetup.cs`'nin menü 32'si artık `FactoryExpansionManager`/
+`PowerManager`/`OrderManager`'ı da bulup köprüye bağlıyor (zaten var olan bir köprüye bile
+— yeni alanları "retrofit" ediyor, menüyü tekrar çalıştırmak güvenli).
+**Hiç dokunulmayan**: `FactoryExpansionManager.TryPurchase`, `PowerManager.
+TryPurchaseUpgrade`, `OrderManager.TryAcceptOrder/TryRegisterPackedItem/TryCompleteOrder`,
+`FactoryExpansionGate`, `PackingStation`, `ShippingZone`.
+
+**Kullanıcıya düşen adımlar**: `Shiftworks/Setup/32. Add Network Economy Bridge To
+WorkshopMultiplayer Scene`'i **yeniden çalıştırın** (yeni alanları mevcut köprüye bağlamak
+için) — ardından yeni bir Windows build alın.
+
+**Aşama 11B hâlâ "tamamlandı" işaretlenmedi. Aşama 11C'ye geçilmedi.**
+
+## Aşama 11B Genişletmesi Test Talimatları
+
+1. Menü 32'yi yeniden çalıştırın, yeni Windows build alın.
+2. Host genişletme satın alır → Client'ta Üretim Alanı B kapısının açıldığını doğrulayın.
+3. Client genişletme satın alır → Host'ta kapının açıldığını doğrulayın.
+4. Aynı genişletmeyi ikinci kez satın almaya çalışın (her iki taraftan) — buton zaten
+   devre dışı olmalı / "zaten satın alındı" uyarısı çıkmalı, para düşmemeli.
+5. Host elektrik kapasitesini yükseltir → Client panelinde yeni kapasitenin göründüğünü
+   doğrulayın.
+6. Client elektrik kapasitesini yükseltir → Host panelinde yeni kapasitenin göründüğünü
+   doğrulayın.
+7. Her işlemde paranın **sadece bir kez** düştüğünü (her iki ekranda da aynı bakiye)
+   doğrulayın.
+8. Host yeni sipariş kabul eder → Client'ta aynı siparişin "Devam Ediyor" göründüğünü
+   doğrulayın.
+9. Client yeni sipariş kabul eder → Host'ta aynı siparişin göründüğünü doğrulayın.
+10. Bir sipariş aktifken diğer tarafın başka bir sipariş kabul edemediğini doğrulayın.
+11. Client'ı bağlantıdan kesip yeniden bağlayın — genişletme/elektrik/aktif sipariş
+    durumunun doğru (güncel) geldiğini doğrulayın.
+12. **Regresyon**: makine satın alma/yerleştirme hâlâ çalışıyor mu, Console'da kırmızı
+    hata var mı, tek-oyunculu `WorkshopPrototype.unity` hâlâ sorunsuz mu kontrol edin.
+
+## Aşama 11B Genişletmesi — NullReferenceException Düzeltmesi (`NetworkEconomyBridge.IndexOfActiveOrder`)
+
+Kullanıcı Console'da `IndexOfActiveOrder()`/`Update()`'te (satır 350/440) her karede tekrarlanan
+(999+) bir `NullReferenceException` bildirdi, ve genişletme/elektrik/sipariş'in hâlâ hiç
+senkronize olmadığını.
+
+**Kesin kök neden**: Sahne dosyası doğrudan incelendi — `NetworkEconomyBridge`'in serileştirilmiş
+verisinde **hâlâ sadece `economyManager`/`purchaseManager`/`catalog` vardı**,
+`factoryExpansionManager`/`powerManager`/`orderManager` hiç yazılmamıştı. Bu, önceki rapordaki
+"menü 32'yi yeniden çalıştırın" adımının **henüz yapılmadığını** kanıtlıyor — yani kod mantığında
+"gerçek" bir hata değil, `orderManager` alanı gerçekten null olduğu için `orderManager.ActiveOrder`
+her `Update()`'te patlıyordu (host her karede çalıştığı için 999+ tekrar).
+
+**Uygulanan düzeltme (sadece gizleme değil — gerçek null kontrolü + daha iyi başlatma sırası)**:
+- **`ResolveMissingReferences()`** (yeni, `OnNetworkSpawn`'da ilk iş olarak çalışıyor): eksik
+  her referans için `MachineController.Awake()`'in `PowerManager` için zaten kullandığı AYNI
+  `FindFirstObjectByType<T>()` yedek-arama desenini uyguluyor. Sahnede her manager türünden
+  tam olarak bir tane olduğu için bu güvenli ve doğru — **artık menü 32'yi yeniden çalıştırmak
+  bile gerekmiyor**, sadece yeni build yeterli (yine de menüyü çalıştırmanız önerilir, sahne
+  verisini de güncel tutar).
+- **`ValidateReferences()`** (yeni): yedek aramadan SONRA hâlâ eksik olan varsa, bunu **tam
+  olarak hangi alan(lar)** eksik diyerek **bir kez** loglayıp köprüyü güvenli şekilde devre dışı
+  bırakıyor — `Update()` ve 5 `RequestX` genel metodunun hepsi artık `_referencesValid` bayrağını
+  kontrol ediyor, hiçbiri eksik referansla devam etmiyor. Böylece aynı hata bir kere loglanır,
+  999 kere değil, ve **asla sessizce yutulmaz** (try/catch ile maskeleme yapılmadı — talimatınız
+  gereği).
+- 5 `OnValueChanged`/`OnListChanged` geri çağırması da aynı bayrağı kontrol ediyor (host'ta
+  referanslar geçerliyken client'ta (teorik olarak) eksikse bile client tarafında NRE olmaz).
+
+**Kullanıcıya düşen adımlar**: **Yeni bir Windows build gerekiyor** (kod değişti). Menü 32'yi
+tekrar çalıştırmanıza artık gerek yok (çalışma-zamanı yedek-arama bunu kapsıyor), ama isterseniz
+sahne verisini kalıcı olarak güncellemek için yine çalıştırabilirsiniz — zarar vermez (retrofit).
+
+**Aşama 11B artık kullanıcı tarafından tam olarak onaylandı** (bağlantı, ortak para, makine
+satın alma/yerleştirme, fabrika genişletme, elektrik yükseltme, ortak sipariş kabul — hepsi
+çalışıyor). Bunun üzerine **Aşama 11C** başladı, kullanıcının isteğiyle **11C-1/11C-2/11C-3**
+alt aşamalarına bölündü (her biri test onayı almadan sıradakine geçilmiyor). Bu oturumda
+**yalnızca 11C-1** uygulandı.
+
+## Aşama 11C-1 Mimarisi (Ortak Eşya Alma/Taşıma/Bırakma/Fırlatma)
+
+**Ön inceleme bulgusu**: `CarryableItem.Interact/Drop/Throw` zaten `MachinePurchaseManager.
+TryPurchase` ile aynı tek-atomik-yetkili desende yazılmıştı; `PlayerInteractor`'daki
+`RequestInteraction`/`RequestDrop`/`RequestThrow` metotlarının kendi yorum satırı bile "bu,
+gelecekteki multiplayer RPC çağrısının ekleneceği sınır" diyordu — tam da bu aşamada
+kullanılan seam. `CuttingMachine`/`AssemblyMachine`/`ConveyorSegment`/`RawMaterialFeeder`/
+`OutputStorage`/`PowerManager` hâlâ ağ üzerinden hiç paylaşılmıyor (11C-2/11C-3'ün kapsamı);
+bu yüzden bu oturumda **sadece** sahnede zaten var olan (`TestBox_1..4`, sahne-gömülü,
+host başlarken otomatik ağa açılan) eşyalar + dört üretim eşyası prefabı
+(`MetalSheet`/`CutMetalPart`/`AssembledComponent`/`ShipmentPackage`) hazırlandı — ama bu dört
+prefab'tan makine/besleyici tarafından ÜRETILEN örnekler, üretim zinciri kendisi henüz ağa
+açılmadığı (hâlâ düz `Instantiate`, `NetworkObject.Spawn()` çağrılmıyor) için **henüz** iki
+oyuncu arasında görünmüyor — sadece sahnede zaten duran eşyalar (TestBox'lar) bu aşamada
+tam olarak test edilebilir. Prefab'lar bilinçli olarak şimdiden hazırlandı ki 11C-2/11C-3
+üretim zincirini ağa açarken sadece `.Spawn()` çağırması yeterli olsun.
+
+**`CarryableItem.cs`'e dokunulmadı** (tek-oyunculu fizik/etkileşim mantığı birebir aynı) —
+sadece iki küçük, katkısal ekleme: `_networkAvailable` bayrağı (varsayılan `true`, tek
+oyunculuda hiç değişmiyor) ve bunu `CanInteract`'e ekleyen tek bir ek koşul + `SetNetworkAvailability`
+setter'ı. Bunun nedeni: ağ üzerinde `Interact()` artık yalnızca HOST'ta çalışıyor, yani bir
+client'ın kendi yerel `CurrentHolder`'ı hep `null` kalırdı — bu bayrak olmadan, başka biri
+zaten tutarken bile "E - Al" uyarısı yanlışlıkla görünmeye devam ederdi.
+
+**Yeni: `NetworkCarryableItem`** — her eşyanın yanında, `IsHeld || IsAutomated`'i tek yönlü
+(host → herkes) bir `NetworkVariable<bool>` ile senkronize eder, `CarryableItem.
+SetNetworkAvailability`'ye uygular.
+
+**Yeni: `NetworkItemInteractionBridge`** — sahnede tek bir singleton (`NetworkEconomyBridge`
+ile aynı rol). Alma (`RequestPickup`) başarısız olabileceği için (biri sizden önce almış
+olabilir) host onayı beklenip `_carriedItem` ancak onay gelince set ediliyor — tam da makine
+satın alma ile aynı desen. Bırakma/fırlatma (`RequestDrop`/`RequestThrow`) **"ateşle ve
+unut"**: `CarryableItem.Drop/Throw` zaten tutuluyorken asla gerçek anlamda başarısız olamaz,
+bu yüzden istek host'a gider ama client kendi `_carriedItem`'ını hemen (tek oyunculudaki gibi
+anında tepki veren) temizler.
+
+**Uzak client'ın "kimliği" host'ta nasıl çözülüyor**: Host'ta çalışan `IInteractor`
+gerektiren `CarryableItem.Interact(IInteractor)` metodu **hiç değiştirilmedi** — host, isteği
+gönderen client'ın `NetworkManager.SpawnManager.GetPlayerNetworkObject(senderClientId)` ile
+o client'ın kendi `NetworkPlayer`'ını (host'un zaten sahip olduğu replike temsilini) bulup
+üzerindeki `PlayerInteractor`'ı tam olarak aynı `Interact(IInteractor)` çağrısına veriyor —
+sıfır değişiklikle.
+
+**Fizik senkronizasyonu**: Her eşyaya `NetworkObject` + `NetworkTransform` (**Server**
+yetkili modu — host'un fiziği her zaman tek otorite) + `NetworkRigidbody` (host dışındaki
+her kopyanın Rigidbody'sini otomatik olarak kinematic yapar, bu da "client'ta bağımsız fizik
+simülasyonları çakışmasın" gereksinimini NGO'nun kendi, resmi, test edilmiş bileşeniyle
+çözüyor — özel kod yazılmadı) eklendi.
+
+## Aşama 11C-1'de Oluşturulan/Değiştirilen Dosyalar
+
+- Yeni: `Assets/_Project/Scripts/Multiplayer/NetworkCarryableItem.cs`,
+  `Assets/_Project/Scripts/Multiplayer/NetworkItemInteractionBridge.cs`.
+- Yeni: `Assets/_Project/Scripts/Editor/ShiftworksMultiplayerItemSetup.cs` (menü **34**:
+  4 eşya prefabına ağ bileşenleri ekler + mevcut `MultiplayerNetworkPrefabs.asset`'e kaydeder
+  (Aşama 11B'nin zaten oluşturduğu AYNI liste, NetworkManager'a yeniden bağlama gerekmiyor);
+  menü **35**: sahnedeki 4 `TestBox`'a aynı bileşenleri ekler + `NetworkItemInteractionBridge`'i
+  sahneye ekler; + "Apply Multiplayer Item Interaction" birleşik menüsü).
+- Değiştirilen (küçük, katkısal): `CarryableItem.cs` (`_networkAvailable` + `SetNetworkAvailability`),
+  `PlayerInteractor.cs` (`HandleItemPickup` yeni metot + `RequestDrop`/`RequestThrow` köprü
+  varsa onu kullanıyor).
+- **Hiç dokunulmayan**: `CarryableItem`'ın kendi fizik/etkileşim mantığı, `MachineController`,
+  `ConveyorSegment`, `RawMaterialFeeder`, `OutputStorage`, `PowerManager`, `WorkshopPrototype.unity`,
+  `MultiplayerPrototype.unity`.
+
+## Aşama 11C-1 — Desteklenmeyen / Bilinçli Sınırlar (açıkça belirtiliyor)
+
+- Makine/besleyici tarafından üretilen eşyalar (MetalSheet/CutMetalPart/AssembledComponent)
+  **henüz iki oyuncu arasında görünmüyor** — üretim zinciri kendisi ağa açılmadı (11C-2/11C-3).
+  Bu eşyaların prefab'ları hazır (ağ bileşenleri eklendi) ama hiçbir şey onları
+  `NetworkObject.Spawn()` ile açmıyor henüz.
+- Kesim/montaj makinesi üretim durumu hâlâ senkron değil (11C-2'nin kapsamı).
+- Konveyör/depo/elektrik-duraklatma/sonradan-bağlanan-client senkronu hâlâ yok (11C-3'ün
+  kapsamı).
+- Alma isteği host onayı bekler (yetersiz gecikme hissedilmeyecek kadar küçük olmalı,
+  localhost testinde), bırakma/fırlatma anında yerel olarak uygulanır (ateşle-ve-unut) —
+  host hiçbir zaman reddetmeyeceği için bu seçildi.
+
+## Aşama 11C-1 Test Talimatları (yalnızca sahnedeki TestBox'larla — üretilen eşyalar henüz kapsam dışı)
+
+1. Sırayla **`34. Add NetworkObject To Item Prefabs`** ve **`35. Add Item Interaction To
+   WorkshopMultiplayer Scene`** çalıştırın (veya "Apply Multiplayer Item Interaction").
+   Console'da hata olmadığını kontrol edin.
+2. Yeni bir Windows build alın.
+3. Host Başlat / Client Bağlan.
+4. **Host bir TestBox'ı alır** → Client'ın ekranında kutunun Host'un elinde (kamerasının
+   önünde) göründüğünü doğrulayın.
+5. **Client bir TestBox'ı alır** → Host'un ekranında kutunun Client'ın elinde göründüğünü
+   doğrulayın.
+6. Biri bir kutuyu tutarken diğer tarafın O KUTUYU alamadığını ("E - Al" görünmemeli veya
+   işe yaramamalı) doğrulayın.
+7. Her iki taraf da kendi kutusunu **bırakıp (G)** ve **fırlatıp (sol tık)** diğer tarafta
+   doğru konumda/fizikle göründüğünü doğrulayın.
+8. **Regresyon**: `WorkshopPrototype.unity`'de tek-oyunculu eşya alma/taşıma/bırakma/fırlatma
+   hâlâ sorunsuz mu kontrol edin. Makine satın alma/genişletme/elektrik/sipariş hâlâ çalışıyor
+   mu kontrol edin.
+9. Console'da kırmızı hata olmadığını doğrulayın.
+
+**Aşama 11C-1 kullanıcı tarafından test edilip onaylanmadan 11C-2'ye geçilmeyecek.**
+
+## Aşama 11C — Depo Stok Senkronizasyonu Hatası Düzeltmesi
+
+11C-1 testi sırasında kullanıcı şunu buldu: `OutputStorage`'dan bir parça alındığında
+**sadece alan oyuncunun ekranındaki stok sayısı düşüyordu**, diğer oyuncu hâlâ eski sayıyı
+görüyordu.
+
+**Kesin neden**: `OutputStorage.StoredCount` hiç ağ üzerinden paylaşılmıyordu —
+`PlayerInteractor.HandleStorageInteraction`, `OutputStorage.TryWithdraw`'ı **doğrudan**
+çağırıyordu, bu da her client'ın kendi yerel `StoredCount`'unu azaltıyordu (host'unkine hiç
+dokunmadan). Ayrıca `TryWithdraw`'ın ürettiği eşya düz bir `Instantiate()` idi,
+`NetworkObject.Spawn()` edilmiyordu — yani alınan eşya bile diğer oyuncuya hiç görünmüyordu.
+
+**Düzeltme (aynı kurulu desen — yeni bir sistem icat edilmedi)**:
+- Yeni `NetworkOutputStorage` — `NetworkEconomyBridge`'in bakiye için yaptığının aynısını
+  `StoredCount` için yapar: tek yönlü (host → herkes) `NetworkVariable<int>`, mevcut Aşama
+  10 `RestoreStoredCount` giriş noktasına uygulanır (UI/prompt kodu hiç değişmedi).
+- `NetworkItemInteractionBridge.RequestWithdraw` (yeni) — `OutputStorage.TryWithdraw`'ı
+  **sadece host çağırabilir**: host'ta senkron (tek oyunculuyla birebir), uzak client'ta
+  `ServerRpc`→host çalıştırır→ürettiği eşyayı `NetworkObject.Spawn()` eder→sonucu (ve eşyaya
+  bir `NetworkObjectReference`) hedefli `ClientRpc` ile geri bildirir. `PlayerInteractor.
+  _carriedItem` ancak host onayından sonra set edilir (makine satın alma ile birebir aynı
+  güvenlik deseni — host onaylamazsa hiçbir şey olmaz, çoğalma/kaybolma riski yok).
+- Host zaten tek `TryWithdraw` çağrısı içinde stoğu düşürüp eşyayı üretiyor — bu **tek atomik
+  metot** hiç değişmedi, bu yüzden "aynı anda iki istekte stok negatife düşmesin" ve "stok 0
+  olunca kimse alamaz" zaten garantiydi (host'ta HER istek sırayla işlenir, race yok).
+
+## Aşama 11C'de Oluşturulan/Değiştirilen Dosyalar (bu düzeltme)
+
+- Yeni: `Assets/_Project/Scripts/Multiplayer/NetworkOutputStorage.cs`.
+- Değiştirilen: `NetworkItemInteractionBridge.cs` (`RequestWithdraw` + ilgili RPC'ler eklendi),
+  `PlayerInteractor.cs` (`HandleStorageInteraction` köprü varsa onu kullanıyor),
+  `ShiftworksMultiplayerItemSetup.cs` (yeni menü **36**).
+- **Hiç dokunulmayan**: `OutputStorage.TryAccept/TryWithdraw`'ın kendi mantığı,
+  `ConveyorSegment`, `RawMaterialFeeder`, ortak ekonomi/makine/genişletme/elektrik/sipariş
+  sistemleri, tek oyunculu `WorkshopPrototype.unity`.
+
+## Kullanıcıya Düşen Adımlar (bu düzeltme)
+1. **`Shiftworks/Setup/36. Add Output Storage Sync To WorkshopMultiplayer Scene`** çalıştırın
+   (menü 34 ve 35'in zaten çalıştırılmış olması gerekir — depo `CutMetalPart` üretiyor,
+   o prefab'ın ağ bileşenleri menü 34'ten geliyor).
+2. Yeni bir Windows build alın.
+3. Host/Client: depodan sırayla parça alın — ikisinde de aynı stok sayısını, alınan parçanın
+   diğer tarafta da göründüğünü doğrulayın. Stok 0'a inince kimsenin alamadığını doğrulayın.
+
+**Aşama 11C hâlâ tamamlanmadı olarak işaretlendi.**
+
+## Aşama 11C — Client Makine Satın Alınca Haritadan Düşme Hatası Düzeltmesi
+
+**Bulgu**: `NetworkEconomyBridge.ExecutePlacementOnServer`, host'un client'tan gelen
+yerleştirme `position`'ını **hiç doğrulamadan** doğrudan `Instantiate` + `NetworkObject.Spawn`
+ediyordu. `MachinePlacementController`'ın KENDİ ghost-önizleme çakışma kontrolü sadece
+**client'ın kendi yerel** fizik dünyasına göre çalışıyor — host'taki gerçek oyuncu
+konumu, owner-authoritative `NetworkTransform` nedeniyle client'ın bildiğinden en az bir ağ
+tick'i kadar farklı olabilir. Bu yüzden client'a göre "boş" görünen bir nokta, host'un kendi
+simülasyonunda bir oyuncunun (genelde isteği gönderenin kendisinin) üzerine denk gelebiliyordu.
+Solid (trigger olmayan) bir collider bir `CharacterController`'ın İÇİNE aniden belirince,
+PhysX onu anında "depenetrate" ediyor — zemin kalınlığına/geometriye bağlı olarak bu itme
+karakteri beklenmedik bir yöne, hatta haritanın altına fırlatabiliyor. Bu tam olarak
+bildirilen "client makine satın alınca haritanın altına düşüyor" belirtisiyle örtüşüyor.
+
+**Düzeltme (`NetworkEconomyBridge.cs`)**: `ExecutePlacementOnServer`'a, `MachinePlacementController`'ın
+kendi ghost çakışma kontrolüyle **birebir aynı** (aynı 3cm "skin" payı, aynı sadece-"Ignore
+Raycast"-hariç mantığı) host-taraflı bir doğrulama eklendi — host, spawn etmeden önce KENDİ
+fizik dünyasında o noktada bir şey olup olmadığını kontrol ediyor; varsa yerleştirmeyi
+reddediyor ve **bekleyen makine sayısını geri ekliyor** (parayı kaybetmeden). Ayrıca talep
+edilen teşhis logu eklendi: her yerleştirme isteğinde host'un o client için bildiği oyuncu
+konumu, hedef yerleştirme konumuyla birlikte Console'a yazılıyor.
+
+**Bilinen küçük kozmetik sınır**: Host çakışma yüzünden reddederse, client'a giden hata mesajı
+hâlâ genel "Bekleyen makine yok" metnini kullanıyor (gerçek sebep "çakışma" olsa da) — işlevsel
+sonuç doğru (yerleştirme iptal, para kaybı yok, ghost açık kalır, tekrar denenebilir), sadece
+mesaj metni şimdilik daha az spesifik.
+
+## Değiştirilen Dosya (bu düzeltme)
+- `Assets/_Project/Scripts/Multiplayer/NetworkEconomyBridge.cs` — tek dosya.
+
+## Kullanıcıya Düşen Adımlar (bu düzeltme)
+Sadece script değişti — **yeni bir Windows build gerekiyor**, Editor menüsü çalıştırmaya
+gerek yok.
+
+## Aşama 11C — Montaj Makinesinde Ortak Girdi Hatası Düzeltmesi
+
+**Kesin neden**: `MachineController` (hem `CuttingMachine` hem `AssemblyMachine`) hiçbir
+zaman ağ üzerinden paylaşılmadı — her client'ın kendi sahne/satın-alınan kopyası tamamen
+**bağımsız** simülasyon çalıştırıyordu. Host bir `CutMetalPart` koyduğunda bu sadece HOST'un
+kendi yerel `_bufferedInputCount`'unu 1 yapıyordu; client'ın kendi ayrı kopyası hâlâ 0'daydı.
+Client ikinci parçayı koymaya çalıştığında, KENDİ yerel makinesi bunu "birinci" parça olarak
+kabul ediyordu (recipe 2 girdi istiyor, hâlâ Idle) — üretim BAŞLAMIYORDU, çünkü gerçekte
+hiçbir taraf "2/2"ye ulaşmadı; sadece iki taraf da kendi "1/2"sinde kilitli kaldı. Senaryoda
+"ilk parçayı koyan oyuncu ikinciyi de koyarsa çalışıyor" ifadesi tam bunu doğruluyor — aynı
+oyuncunun İKİ ayrı E-basışı KENDİ yerel makinesinde gerçekten 1→2 ilerliyor.
+
+**Düzeltme (aynı kurulu dört parçalı desen — makine satın alma/depo ile birebir aynı mimari)**:
+- Yeni `NetworkMachineController` — `MachineController`'ın `State`/`BufferedInputCount`/
+  işlenme süresini (host → herkes, tek yönlü) senkronize eder; yeni, **dar kapsamlı**
+  `MachineController.RestoreDisplayState` giriş noktasına uygular (Aşama 10'un
+  `RestoreProductionState`'i KASITLI OLARAK kullanılmadı — o metot çıktıyı da yeniden
+  yaratır, bu ise her client'ın kendi kopyasında ayrı bir çıktı oluşturup çoğaltmasına yol
+  açardı). Host'un kendi makinesi `OutputReady`'ye geçtiği anda, zaten üretilmiş çıktı
+  (`MachineController.PendingOutput`) tam o anda `NetworkObject.Spawn()` edilir — böylece
+  çıktının kendisi de (depo/makine satın alma ile birebir aynı mantıkla) her iki oyuncuya
+  aynı anda görünür.
+- `NetworkItemInteractionBridge`'e `RequestFeedMachine`/`RequestCollectOutput` eklendi —
+  `TryAcceptInput`/`TryCollectOutput`'ı artık **sadece host çağırabilir**. Client isteği
+  host'a gönderir; **host, isteği gönderen oyuncunun GERÇEKTEN o ürünü taşıdığını kendi
+  gördüğü `CurrentHolder` ile doğrular** (sizin açıkça istediğiniz sahtecilik kontrolü) —
+  eşleşmezse istek reddedilir, `TryAcceptInput` hiç çağrılmaz.
+- İstenen tüm teşhis logları eklendi: hangi oyuncu istek gönderdi, ne taşıyordu, makinenin
+  o anki girdi sayısı/durumu, kabul mü reddedildi mi, reddedilme sebebi.
+- Elektrik duraklaması **ekstra kod gerektirmedi**: `HasPower` bilinçli olarak senkronize
+  edilmiyor (client'ta hep `false` kalıyor) — bu da client'ın kendi `Update()`'inin üretim
+  ilerlemesini KENDİ BAŞINA asla artırmamasını sağlıyor (host'un senkronize ettiği değer
+  dışında). Host'un gücü kesilirse host'un kendi ilerlemesi zaten donar, senkronize değer de
+  otomatik olarak donmuş görünür — ayrıca ele alınmasına gerek kalmadı.
+- İki oyuncu aynı anda girdi koymaya çalışırsa: host istekleri HER ZAMAN sırayla işler (RPC
+  çağrıları host'un ana thread'inde kuyruğa alınır) — `TryAcceptInput`'ın kendi atomik
+  kontrolü (sadece `Idle` durumda kabul eder) zaten "iki kez tüketilmesin" garantisini
+  sağlıyor, hiçbir ek kilitleme mekanizması gerekmedi.
+
+## Değiştirilen/Oluşturulan Dosyalar (bu düzeltme)
+- Yeni: `Assets/_Project/Scripts/Multiplayer/NetworkMachineController.cs`.
+- Değiştirilen (küçük, katkısal): `MachineController.cs` (`BufferedInputCount`/
+  `ProcessingElapsedSeconds`/`PendingOutput` salt-okunur erişimciler + `RestoreDisplayState`),
+  `NetworkItemInteractionBridge.cs` (`RequestFeedMachine`/`RequestCollectOutput` + ilgili
+  RPC'ler ve loglar), `PlayerInteractor.cs` (`HandleMachineInteraction` köprü varsa onu
+  kullanıyor), `ShiftworksMultiplayerEconomySetup.cs` (yeni menü **37**).
+- **Hiç dokunulmayan**: `MachineController.TryAcceptInput/TryCollectOutput/CompleteProcessing`'in
+  kendi mantığı, `PowerManager`, ortak ekonomi/genişletme/elektrik/sipariş sistemleri, eşya
+  taşıma sistemi, tek oyunculu sahne.
+
+## Kullanıcıya Düşen Adımlar (bu düzeltme)
+1. **`Shiftworks/Setup/37. Add NetworkMachineController To Machine Prefabs`** çalıştırın
+   (menü 32'nin zaten çalıştırılmış olması gerekir).
+2. Yeni bir Windows build alın.
+3. Senaryo A ve B'yi (Host önce/Client önce) test edin — 8 saniye sonra sadece 1
+   `AssembledComponent` oluştuğunu, her iki ekranda da girdi sayısı/durumun aynı göründüğünü
+   doğrulayın.
+4. Regresyon: metal kesim makinesi, ortak ekonomi/genişletme/elektrik/sipariş/depo, eşya
+   taşıma, tek oyunculu sahne hâlâ sorunsuz mu kontrol edin.
+
+**Not**: Scene-gömülü ORİJİNAL (Stage 3) `CuttingMachine` bu düzeltmenin kapsamı dışında
+(hiçbir zaman `NetworkObject` almadı, satın alınan bir prefab değil) — tek-input reçetesi bu
+2-oyunculu girdi yarışını zaten yaşamıyordu, bu yüzden bilinçli olarak dokunulmadı.
+
+## Aşama 11C — CarryableItem Referans Hatası Düzeltmesi (Bağlantı Kesilen Oyuncunun Elindeki Ürün)
+
+**Kesin neden**: `CarryableItem.Interact/Drop` artık (11C-1'den beri) **sadece host'ta**
+çalışıyor. Hiçbir yerde, bir oyuncunun bağlantısı kesildiğinde/despawn olduğunda **elinde
+tuttuğu eşyanın bırakılması** yoktu. Host'un `FixedUpdate()`'i, artık var olmayan bir
+oyuncunun `HoldPoint`'ine erişmeye çalışmaya **sonsuza kadar** devam ediyordu — her fizik
+adımında `MissingReferenceException`. Eşya da "tutuluyor" durumunda sonsuza kadar sıkışıp
+kalıyordu (`IsHeld` asla `false` olmuyordu), bu yüzden kimse onu göremiyor/kullanamıyordu.
+
+**Neden `IsHeld` bunu kendi başına yakalayamıyordu**: `CurrentHolder`, `IInteractor`
+**arayüz** tipinde tutuluyor — `CurrentHolder != null` kontrolü bu yüzden **düz C# referans
+eşitliği**, Unity'nin "alttaki GameObject yok edildi mi" özel kontrolü DEĞİL. Yok edilmiş bir
+oyuncuya işaret eden `CurrentHolder` referansı, C# açısından hâlâ "null değil" görünüyordu.
+
+**Düzeltme (gerçek yaşam döngüsü onarımı, sadece null kontrolüyle gizleme değil)**:
+- `NetworkPlayerSetup.OnNetworkDespawn` (zaten var olan metot, genişletildi) — bir oyuncu
+  despawn olduğunda (bağlantı kesme dahil), **host tarafında** sahnedeki TÜM `CarryableItem`'lar
+  taranıp `CurrentHolder`'ı o oyuncuya eşit olan varsa `Drop()` çağrılıyor — eşya güvenli
+  şekilde dünyaya bırakılıyor (yer çekimi/layer/collision-ignore doğru geri yükleniyor, çünkü
+  bunlar `Drop()`'un KENDİ zaten var olan, değiştirilmemiş mantığı).
+- `CarryableItem.FixedUpdate`'e **ikincil bir güvenlik ağı** eklendi: `HoldPoint` gerçek bir
+  `Transform` referansı olduğu için `CurrentHolder.HoldPoint == null` kontrolü Unity'nin
+  GÜVENLİ "yok edildi mi" kontrolünü kullanıyor — bu YANLIŞLIKLA kaçırılan BAŞKA bir yaşam
+  döngüsü boşluğu olursa bile eşya kendini otomatik bırakıyor, sonsuz hata döngüsüne
+  girmiyor. (Bu, birincil düzeltme DEĞİL — asıl düzeltme yukarıdaki despawn temizliği.)
+- `NetworkCarryableItem` zaten her karede `IsHeld`'i (dolayısıyla `Drop()` sonrası `false`
+  olan hâlini) host'tan senkronize ediyordu — bu düzeltmeyle tutarlılığı otomatik olarak
+  korunuyor, ek kod gerekmedi.
+
+## Değiştirilen Dosyalar (bu düzeltme)
+- `Assets/_Project/Scripts/Multiplayer/NetworkPlayerSetup.cs` — `OnNetworkDespawn` genişletildi.
+- `Assets/_Project/Scripts/Items/CarryableItem.cs` — `FixedUpdate`'e ikincil güvenlik kontrolü.
+- **Hiç dokunulmayan**: `MachineController`/`NetworkMachineController`/`NetworkItemInteractionBridge`'in
+  üretim/alma mantığı (bunlar zaten doğru çalışıyordu — AssembledComponent prefab'ı Aşama
+  11C-1'de `NetworkObject` almıştı, montaj makinesi çıktıyı tamamlandığı anda ağa açıyordu);
+  ortak ekonomi/makine satın alma/depo sistemleri; tek oyunculu sahne.
+
+## Kullanıcıya Düşen Adımlar (bu düzeltme)
+Sadece script değişti, hiçbir Editor menüsü çalıştırmaya gerek yok — **yeni bir Windows build
+alın** ve montaj makinesinden çıktı alma testini (özellikle bir bağlantı kesme/yeniden bağlanma
+döngüsünden sonra) tekrarlayın.
+
+## Aşama 11C — Montaj Girdisi Host–Client Uyuşmazlığı Düzeltmesi (Sahnedeki CuttingMachine)
+
+**Kesin neden (kod + sahne YAML'ı okunarak doğrulandı)**: `WorkshopMultiplayer.unity`'deki
+TEK pre-placed makine olan `CuttingMachine` (sahnede doğrudan oluşturulmuş, hiçbir zaman
+canlı bir prefab instance'ı olmamış — sahnenin kendi YAML'ında bu GameObject için
+`m_PrefabInstance: {fileID: 0}` doğrulandı) Aşama 11B/37'de `CuttingMachine.prefab`/
+`AssemblyMachine.prefab` **prefab asset'lerine** eklenen `NetworkObject`/
+`NetworkMachineController`'ı hiçbir zaman almadı — bir prefab asset değişikliği yalnızca HÂLÂ
+BAĞLI prefab instance'larına yayılır, bu obje hiç öyle biri olmadı. Sonuç: bu makinenin
+ürettiği HER `CutMetalPart`, hiçbir zaman `NetworkObject.Spawn()` edilmedi (bunu tetikleyecek
+`NetworkMachineController` zaten yoktu).
+
+Bu, `NetworkItemInteractionBridge.RequestPickup` VE `RequestFeedMachine`'in ikisini de
+"henüz ağa açılmamış öğe" olarak değerlendirip **sessizce tek-oyunculu yerel çağrıya
+("fallback") düşürmesine** yol açtı — hedef makine (satın alınmış, tamamen ağ senkronlu bir
+`AssemblyMachine`) kusursuz olsa bile, taşınan `CutMetalPart` ağa açılmamış olduğu için istek
+hiçbir zaman host'a ulaşmadı; her iki çağrı da E'ye basan oyuncunun KENDİ makinesinde yerel
+olarak çalıştı. Client E'ye basınca kendi yerel `MachineController.BufferedInputCount`'u
+1/2'ye çıktı (host hiç bilgilendirilmedi, o yüzden 0/2'de kaldı) — tam olarak bildirilen
+"Client 1/2, Host 0/2" belirtisi. `NetworkMachineController`'ın kendi `Update()`'i host'un
+gerçek değeri (0) hiç değişmediği için `OnValueChanged` da hiç tetiklenmedi, bu yüzden
+Client'ın yanlış yerel değeri bir daha asla düzeltilmedi.
+
+Önceki raporda "sahnedeki CuttingMachine multiplayer kapsamı dışında" denmişti; bu rapor o
+sınırın montaj girdisini de nasıl bozduğunu gösteriyor — ağa açılmamış bir öğe, kendisinden
+SONRAKİ host-authoritative adımı da (tamamen ağ senkronlu bir makineye besleme dahi) sessizce
+devre dışı bırakıyor.
+
+**Düzeltme**: `ShiftworksMultiplayerEconomySetup.cs`'e yeni, idempotent menü 38 eklendi —
+`AddOutputStorageSync`'in (OutputStorage için) kullandığı AYNI yöntemle, sahnedeki
+`CuttingMachine` GameObject'ine doğrudan (prefab'a değil) `NetworkObject` +
+`NetworkMachineController` ekliyor, `machine` alanını sahnedeki `MachineController`'a
+bağlıyor. `MachineController`/`NetworkItemInteractionBridge`'in kendisi hiç değişmedi —
+sadece sahnedeki bu TEK eksik bağlantı tamamlandı.
+
+## Değiştirilen/Oluşturulan Dosyalar (bu düzeltme)
+- `Assets/_Project/Scripts/Editor/ShiftworksMultiplayerEconomySetup.cs` — yeni menü 38
+  (`AddNetworkMachineControllerToSceneCuttingMachine`), `Apply Multiplayer Economy`'e eklendi.
+- **Hiç dokunulmayan**: `MachineController`, `NetworkMachineController`,
+  `NetworkItemInteractionBridge`, `AssemblyMachine`/`CuttingMachine` prefab asset'leri, ortak
+  ekonomi/depo/genişletme/elektrik/sipariş sistemleri, tek oyunculu sahne.
+
+## Kullanıcıya Düşen Adımlar (bu düzeltme)
+1. Unity Editor'de **`Shiftworks/Setup/38. Add NetworkMachineController To Scene
+   CuttingMachine`** menüsünü çalıştırın (tek seferlik, idempotent; `Apply Multiplayer
+   Economy` ile de otomatik çalışır).
+2. Yeni bir Windows build alın.
+3. Testi tekrarlayın: Client önce CuttingMachine'den bir `CutMetalPart` üretip alsın, sonra
+   bunu Assembly makinesine beslesin — Host ve Client ekranlarında girdi sayısının artık
+   AYNI (ve doğru) göründüğünü doğrulayın. Ayrıca CuttingMachine'in kendi çıktısının artık
+   her iki ekranda da görünüp toplanabildiğini kontrol edin.
+
+## Aşama 11C — Montaj Girdisi Hatası HÂLÂ ÇÖZÜLMEDİ: Teşhis Turu (düzeltme değil)
+
+Kullanıcı, önceki düzeltmeye (sahnedeki `CuttingMachine`'e `NetworkMachineController` ekleyen
+menü 38) rağmen AYNI "Client 1/2, Host 0/2" belirtisinin devam ettiğini bildirdi. Kesinlikle
+"düzeltildi" denmeden, önce gerçek akış ve ağırlıklı ihtimaller statik olarak (kod + prefab +
+sahne YAML'ı okunarak) incelendi:
+
+**Statik incelemeyle DOĞRULANAN, sorun OLMADIĞI kesinleşen noktalar:**
+1. `AssemblyMachine.prefab` içinde `NetworkObject` + `NetworkMachineController` mevcut,
+   `NetworkMachineController.machine` alanı doğru `MachineController`'a bağlı (prefab dosyası
+   doğrudan okunarak doğrulandı).
+2. `AssemblyMachineDefinition.asset.machinePrefab` gerçekten bu AYNI prefab asset'ine işaret
+   ediyor (guid eşleşmesi doğrulandı) — stale/farklı bir prefab kopyası kullanılmıyor.
+3. `MultiplayerNetworkPrefabs.asset` (bizim elle doldurduğumuz liste) şu an **boş**
+   (`List: []`) — ama bu ZARARSIZ: Unity Netcode'un kendi otomatik `Assets/
+   DefaultNetworkPrefabs.asset`'i (`IsDefault: 1`) CuttingMachine/AssemblyMachine ve dört eşya
+   prefabının hepsini ZATEN otomatik olarak içeriyor (doğrudan okunarak doğrulandı) — yani
+   prefab kayıt eksikliği bu hatanın nedeni DEĞİL.
+4. `NetworkEconomyBridge.ExecutePlacementOnServer`'ın satın alınan makineyi `Instantiate` edip
+   `NetworkObject.Spawn(true)` ile ağa açtığı kod akışı doğru görünüyor.
+5. Gerçek eşya akışı da çıkarıldı: `CuttingMachine`'in `outputReceiverBehaviour` alanı dolu
+   (bir konveyöre bağlı) ve sahnedeki `OutputStorage.acceptedItem` = `CutMetalPart` — yani
+   oyuncu CutMetalPart'ı CuttingMachine'den DEĞİL, muhtemelen depodan (`RequestWithdraw`)
+   alıyor. `RequestWithdraw`/`OutputStorage.TryWithdraw` kodu da host-authoritative görünüyor
+   (host'ta tazeInstantiate + Spawn + CurrentHolder ataması).
+
+**Henüz KANITLANAMAYAN nokta (bu yüzden "düzeltildi" denmiyor)**: Kod akışı kağıt üzerinde
+doğru göründüğü için, `RequestFeedMachine`'in Client'ta neden hâlâ "YEREL (FALLBACK)" yoluna
+düştüğünü (ya da düşüp düşmediğini) kesin olarak belirlemek için ÇALIŞMA ZAMANI kanıtı
+gerekiyor — statik kod okuması bunu tek başına kanıtlayamaz.
+
+### Çıkarılan Akış (dosya + metot adlarıyla)
+`PlayerInteractor.HandleInteractKey` → `HandleMachineInteraction` → `HandleMachineFeed` →
+`NetworkItemInteractionBridge.RequestFeedMachine` → (makine+ürün ağa açılmışsa) →
+`RequestFeedServerRpc` [ServerRpc] → `ExecuteFeedOnServer` → `MachineController.TryAcceptInput`
+→ (host) `NetworkMachineController.Update()`/`PushCurrentStateToClients` →
+`_syncedBufferedInputCount` `NetworkVariable` değişir → (client) `HandleBufferedInputChanged`
+→ `MachineController.RestoreDisplayState` → ekrana yansır. Ayrıca host, aynı istek için
+`NotifyFeedResultClientRpc` ile ayrı bir onay/red yanıtı da gönderir (RPC yanıtı ile
+NetworkVariable senkronu birbirinden bağımsız iki ayrı kanal).
+
+### Eklenen Teşhis Logları (düzeltme değil — sadece gözlem)
+- `NetworkItemInteractionBridge.OnNetworkSpawn`: `[BUILD]` etiketiyle build/protokol
+  tanımlayıcısı (`DiagnosticBuildTag`), IsServer/IsClient/LocalClientId. **Bu satır Client'ın
+  Player.log'unda hiç görünmüyorsa Client eski bir build çalıştırıyor.**
+- `RequestFeedMachine`: her çağrıda `[FEED#N]` etiketiyle LocalClientId, IsServer/IsClient,
+  makine adı/NetworkObjectId/IsSpawned/pozisyon/State/BufferedInputCount, ürün adı/
+  NetworkObjectId/IsSpawned — ve YEREL (FALLBACK) yoluna düşülürse bunu **açık bir uyarıyla**
+  işaretliyor.
+- `RequestFeedServerRpc`: `SERVER_REQUEST_RECEIVED`, host'un çözümlediği makine/ürün kimliği.
+- `ExecuteFeedOnServer`: `SERVER_REQUEST_ACCEPTED`/`SERVER_REQUEST_REJECTED` (gerçek red
+  nedeniyle: null referans / taşıyan eşleşmiyor / `TryAcceptInput` false), kabul edilirse
+  `SERVER_INPUT_COUNT_UPDATED` (eski → yeni değer).
+- `NotifyFeedResultClientRpc`: `CLIENT_STATE_RECEIVED` (RPC yanıtı kanalı).
+- `NetworkMachineController.HandleBufferedInputChanged`: `CLIENT_STATE_RECEIVED`
+  (NetworkVariable kanalı — RPC'den tamamen ayrı, pasif senkron yolu).
+
+Her log aynı `reqId` (`[FEED#N]`) ile işaretli, böylece Host Console'daki ve Client
+Player.log'undaki satırlar aynı istek için eşleştirilebilir.
+
+## Değiştirilen Dosyalar (bu teşhis turu)
+- `Assets/_Project/Scripts/Multiplayer/NetworkItemInteractionBridge.cs` — yukarıdaki loglar.
+- `Assets/_Project/Scripts/Multiplayer/NetworkMachineController.cs` — `HandleBufferedInputChanged`'e log.
+- **Davranış değişikliği YOK** — hiçbir kontrol/koşul/akış değiştirilmedi, sadece gözlem eklendi.
+
+## Kullanıcıdan İstenen (bu teşhis turu)
+1. Yeni bir Windows build alın (Editor menüsü çalıştırmaya gerek yok, sadece script değişti).
+2. Aynı testi tekrarlayın: Client depodan bir CutMetalPart alıp Assembly makinesine beslesin.
+3. **Host Console'un TAMAMINI** ve **Client'ın `Player.log` dosyasını** (özellikle
+   `[Shiftworks][MP][FEED#` ve `[Shiftworks][MP][BUILD]` ile başlayan satırları) paylaşın —
+   bu loglar hangi dalın (YEREL FALLBACK mı, yoksa RPC mi) çalıştığını ve host'un isteği
+   gerçekten reddedip reddetmediğini kesin olarak gösterecek.
+
+Aşama 11C hâlâ tamamlandı işaretlenmedi.
+
+## Aşama 11C — Montaj Girdisi DOĞRULANDI + Paketleme/Sevkiyat Senkronizasyonu Eklendi
+
+Kullanıcı, önceki teşhis turunda eklenen loglarla testi tekrarladı; hem Host (`Editor.log`)
+hem Client (`Player.log`) `[Shiftworks][MP][FEED#1]` satırları karşılaştırıldı: Host kendi
+parçasını besledi (0→1), Client'ın isteği gerçekten RPC ile host'a ulaştı
+(`SERVER_REQUEST_RECEIVED`), host kabul etti (`SERVER_REQUEST_ACCEPTED`, 1→0, `Processing`'e
+geçiş — batch tamamlanınca sayacın sıfırlanması `MachineController.TryAcceptInput`'un zaten
+var olan, değişmemiş mantığı, bir hata değil). **Montaj girdisi senkronizasyonu kullanıcı
+tarafından çalışır olarak doğrulandı.**
+
+Kullanıcı ardından yeni bir eksik bildirdi: sevkiyat kutusu (paketleme ilerlemesi + teslimat)
+taraflar arasında senkron değildi — `PlayerInteractor.HandlePackingInteraction`/
+`HandleShippingInteraction`, `PackingStation.TryPack`/`ShippingZone.TryDeliver`'ı hiçbir
+köprü olmadan DOĞRUDAN çağırıyordu (kod okunarak doğrulandı) — bu bir regresyon değil, 11B'nin
+kendi belgesinde zaten "paketleme/sevkiyat/tamamlama bu aşamanın kapsamı dışında, sadece hangi
+siparişin aktif olduğu senkron" diye açıkça belirtilmiş, hiç ele alınmamış bir alandı. Kullanıcı
+onayıyla şimdi eklendi.
+
+### Yapılan Değişiklik (aynı yerleşik host-authoritative kalıp)
+- **`NetworkEconomyBridge`**: `_syncedActiveOrderIndex`'in yanına iki yeni `NetworkVariable`
+  eklendi — `_syncedActiveOrderProgress` (int) ve `_syncedActiveOrderState` (OrderState).
+  Önceden `ApplyActiveOrderLocally` her zaman sabit `(Active, 0)` uyguluyordu (yani Client'ın
+  "(N/M)" göstergesi hiç ilerlemiyordu); şimdi host'un gerçek ilerleme/durumunu her karede
+  (`PushActiveOrderProgressAndState`, balance/index ile aynı poll döngüsünde) yayınlıyor.
+- **`NetworkItemInteractionBridge`**: `RequestPack`/`RequestDeliver` eklendi — `RequestFeedMachine`
+  ile birebir aynı şekil (anti-sahtecilik `CurrentHolder` kontrolü, tüketim sadece host'ta).
+  Paketleme batch'i tamamlarsa oluşan `ShipmentPackage`, `PackingStation.LastSpawnedPackage`
+  üzerinden okunup `NetworkObject.Spawn()` ediliyor (mevcut `RequestPickup` akışıyla herkes
+  alabiliyor — yeni bir alma mantığı gerekmedi). Teslimatın ödül/para kısmı zaten mevcut
+  `EconomyManager.Balance` senkronuyla, sipariş tamamlanması da zaten mevcut aktif-sipariş
+  index senkronuyla otomatik yayılıyor — ek bir mekanizma gerekmedi.
+- **`PackingStation.cs`**: yeni salt-okunur `LastSpawnedPackage` erişimcisi (`MachineController.
+  PendingOutput` ile aynı "dışarıdan sadece okunur" kuralı).
+- **`PlayerInteractor.cs`**: `HandlePackingInteraction`/`HandleShippingInteraction` artık köprü
+  üzerinden yönlendiriliyor (diğer tüm etkileşimlerle aynı bridge-aware kalıp).
+- **Yeni Setup menüsü 39** (`ShiftworksMultiplayerItemSetup.cs`): sahnedeki tek `PackingStation`/
+  `ShippingZone`'u köprüye bağlıyor (OutputStorage'ın menü 36'sıyla aynı yöntem — bu iki
+  bileşen kendisi `NetworkObject` almıyor, zaten tek örnekler).
+
+### Bilinen Küçük Kozmetik Sınır (kapsam dışı bırakıldı, raporlanıyor)
+`ShipmentPackage.AssociatedOrder` senkron DEĞİL (sadece host'ta `Initialize()` ile set
+ediliyor) — gerçek teslimat host'un kendi kopyasını kullandığı için **doğru çalışıyor**, ama
+Client'ın kendi paketi üzerindeki "E - Siparişi Teslim Et" prompt metni, paket henüz ilk kez
+senkron bir sipariş değişikliğinden geçmediyse yanlışlıkla "Geçersiz paket" gösterebilir.
+Kullanıcı tarafından bildirilmedi, kapsam dışı tutuldu — rapor ediliyor, istenirse ayrı bir
+düzeltme olarak ele alınabilir.
+
+## Değiştirilen/Oluşturulan Dosyalar (bu genişletme)
+- `Assets/_Project/Scripts/Multiplayer/NetworkEconomyBridge.cs`
+- `Assets/_Project/Scripts/Multiplayer/NetworkItemInteractionBridge.cs`
+- `Assets/_Project/Scripts/Orders/PackingStation.cs`
+- `Assets/_Project/Scripts/Player/PlayerInteractor.cs`
+- `Assets/_Project/Scripts/Editor/ShiftworksMultiplayerItemSetup.cs` (menü 39)
+- **Hiç dokunulmayan**: `OrderManager`/`ShippingZone`'un kendi atomik metotları
+  (`TryRegisterPackedItem`/`TryCompleteOrder`/`TryDeliver`), montaj/depo/ekonomi sistemleri,
+  tek oyunculu sahne.
+
+## Kullanıcıya Düşen Adımlar (bu genişletme)
+1. Unity Editor'de **`Shiftworks/Setup/39. Add Packing And Shipping Sync To WorkshopMultiplayer
+   Scene`** menüsünü çalıştırın (tek seferlik; `Apply Multiplayer Item Interaction` ile de
+   otomatik çalışır).
+2. Yeni bir Windows build alın.
+3. Test: Host VE Client sırayla (veya birbirini tamamlayarak) paketleme istasyonuna parça
+   koysun — her iki ekranda da AYNI "(N/M)" ilerlemesini göstermeli. Paket hazır olunca
+   herhangi bir oyuncu sevkiyat alanına taşıyıp teslim edebilmeli, ödül ortak bakiyeye
+   eklenmeli.
+
+Aşama 11C hâlâ tamamlandı işaretlenmedi — kullanıcı testlerini bekliyorum.
 
 ## Bilinen Teknik Riskler
 - Aşama 1'den sonra hiçbir aşamada gerçek bir Unity batch-mode derleme testi yapılmadı (Unity

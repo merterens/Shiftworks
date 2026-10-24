@@ -1,6 +1,7 @@
 using System;
 using Shiftworks.Economy;
 using Shiftworks.Machines;
+using Shiftworks.Multiplayer;
 using Shiftworks.Power;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -105,10 +106,24 @@ namespace Shiftworks.UI
                 return;
             }
 
-            bool success = _powerManager.TryPurchaseUpgrade();
+            // (Stage 11B) Route through NetworkEconomyBridge when present — see
+            // MachineShopPanelUI.OnBuyClicked for the full reasoning. Single-player keeps
+            // the exact original direct call.
+            NetworkEconomyBridge bridge = NetworkEconomyBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestPowerUpgrade(HandleUpgradeResult);
+                return;
+            }
+
+            HandleUpgradeResult(_powerManager.TryPurchaseUpgrade(), "Yetersiz bakiye!");
+        }
+
+        private void HandleUpgradeResult(bool success, string reason)
+        {
             if (!success)
             {
-                ShowWarning("Yetersiz bakiye!");
+                ShowWarning(reason);
             }
             else if (warningText != null)
             {

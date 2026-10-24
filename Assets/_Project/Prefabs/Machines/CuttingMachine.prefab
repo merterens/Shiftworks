@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 1295891229647054857}
   - component: {fileID: 2823518063144155468}
   - component: {fileID: 5539415913434735774}
+  - component: {fileID: 7241596141993531539}
+  - component: {fileID: 1675184325172403107}
   m_Layer: 0
   m_Name: CuttingMachine
   m_TagString: Untagged
@@ -142,6 +144,47 @@ MonoBehaviour:
   insufficientPowerColor: {r: 0.6, g: 0.1, b: 0.8, a: 1}
   animationAmplitude: 0.05
   animationSpeed: 6
+--- !u!114 &7241596141993531539
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 287798120779115612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &1675184325172403107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 287798120779115612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809aebcb159edf94e9f5a1c4dbb04c41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Shiftworks.Multiplayer.NetworkMachineController
+  ShowTopMostFoldoutHeaderGroup: 1
+  machine: {fileID: 5539415913434735774}
 --- !u!1 &3167819066594520159
 GameObject:
   m_ObjectHideFlags: 0

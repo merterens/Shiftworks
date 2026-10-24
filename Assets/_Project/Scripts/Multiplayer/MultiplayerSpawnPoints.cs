@@ -48,6 +48,9 @@ namespace Shiftworks.Multiplayer
             response.Rotation = point != null ? point.rotation : Quaternion.identity;
             response.Approved = true;
             response.Pending = false;
+
+            Debug.Log($"[Shiftworks][MP] Bağlantı onaylandı: clientId={request.ClientNetworkId}, " +
+                $"spawnPoint={(point != null ? point.name : "yok (0,0,0)")}.");
         }
 
         private Transform NextSpawnPoint()

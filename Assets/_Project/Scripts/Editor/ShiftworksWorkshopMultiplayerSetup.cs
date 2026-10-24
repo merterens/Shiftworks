@@ -34,6 +34,9 @@ namespace Shiftworks.EditorTools
         [MenuItem("Shiftworks/Setup/30. Add Networking To WorkshopMultiplayer Scene")]
         public static void AddNetworkingMenuItem() => AddNetworkingToWorkshopMultiplayerScene();
 
+        [MenuItem("Shiftworks/Setup/33. Add Lobby Camera Fallback To WorkshopMultiplayer Scene")]
+        public static void AddLobbyCameraFallbackMenuItem() => AddLobbyCameraFallback();
+
         [MenuItem("Shiftworks/Setup/Apply Workshop Multiplayer (Scene + Networking)")]
         public static void ApplyWorkshopMultiplayer()
         {
@@ -166,6 +169,53 @@ namespace Shiftworks.EditorTools
             EnsureStartupScene();
 
             Debug.Log("[Shiftworks] WorkshopMultiplayer sahnesine ağ katmanı eklendi: " + ScenePath);
+        }
+
+        /// <summary>
+        /// (Stage 11 bugfix) Before any player spawns, WorkshopMultiplayer.unity has no
+        /// active camera at all — every NetworkPlayer's own camera starts disabled until
+        /// OnNetworkSpawn turns it on for its owner, which is exactly when Unity's "No
+        /// cameras rendering" warning was being seen on both the host and a still-connecting
+        /// client. Adds one always-on fallback camera; NetworkPlayerSetup turns it off for a
+        /// viewer the moment that viewer's own local player spawns, and back on if that
+        /// player later despawns (disconnect), so it is never a second active camera at the
+        /// same time as a real one.
+        /// </summary>
+        private static void AddLobbyCameraFallback()
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
+            {
+                Debug.LogError("[Shiftworks] WorkshopMultiplayer sahnesi bulunamadı (önce '29'/'30' çalıştırılmış olmalı).");
+                return;
+            }
+
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                Debug.LogWarning("[Shiftworks] İşlem iptal edildi: açık sahnede kaydedilmemiş değişiklikler vardı.");
+                return;
+            }
+
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+            if (GameObject.Find("LobbyCamera") != null)
+            {
+                Debug.Log("[Shiftworks] LobbyCamera zaten sahnede var, dokunulmadı.");
+                return;
+            }
+
+            Transform spawnReference = FindOrCreateSpawnPoint("PlayerStart", new Vector3(0f, 0f, -6f));
+
+            GameObject lobbyCameraGo = new GameObject("LobbyCamera");
+            lobbyCameraGo.transform.position = spawnReference.position + new Vector3(0f, 1.6f, 0f);
+            lobbyCameraGo.transform.rotation = Quaternion.Euler(10f, 0f, 0f);
+            lobbyCameraGo.AddComponent<Camera>();
+            lobbyCameraGo.AddComponent<AudioListener>();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log("[Shiftworks] WorkshopMultiplayer sahnesine LobbyCamera (bağlantı ekranı için yedek kamera) eklendi.");
         }
 
         private static Transform FindOrCreateSpawnPoint(string name, Vector3 fallbackPosition)

@@ -1,6 +1,7 @@
 using System;
 using Shiftworks.Economy;
 using Shiftworks.Factory;
+using Shiftworks.Multiplayer;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -96,10 +97,25 @@ namespace Shiftworks.UI
                 return;
             }
 
-            bool success = _expansionManager.TryPurchase(_definition);
+            // (Stage 11B) Route through NetworkEconomyBridge when present — see
+            // MachineShopPanelUI.OnBuyClicked for the full reasoning (synchronous on host,
+            // async ServerRpc round-trip on a remote client). Single-player keeps the exact
+            // original direct call.
+            NetworkEconomyBridge bridge = NetworkEconomyBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestExpansionPurchase(_definition, HandlePurchaseResult);
+                return;
+            }
+
+            HandlePurchaseResult(_expansionManager.TryPurchase(_definition), "Yetersiz bakiye!");
+        }
+
+        private void HandlePurchaseResult(bool success, string reason)
+        {
             if (!success)
             {
-                ShowWarning("Yetersiz bakiye!");
+                ShowWarning(reason);
             }
             else
             {

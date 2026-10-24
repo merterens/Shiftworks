@@ -48,21 +48,25 @@ namespace Shiftworks.Multiplayer
             if (disconnectButton != null) disconnectButton.onClick.AddListener(OnDisconnectClicked);
         }
 
-        private void OnEnable()
-        {
-            if (NetworkManager.Singleton == null)
-            {
-                return;
-            }
-
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
-            NetworkManager.Singleton.OnServerStopped += OnServerStopped;
-        }
+        // (Stage 11B bugfix) NetworkManager.Singleton is assigned inside NetworkManager's OWN
+        // OnEnable() (verified against the installed Netcode package source), not Awake() —
+        // and Unity does not guarantee OnEnable() ordering BETWEEN different GameObjects
+        // (only that every object's Awake() runs before any object's OnEnable(), and every
+        // OnEnable() runs before any Start()). Subscribing here in OnEnable() meant that
+        // whenever Unity happened to enable this Canvas before the NetworkManager GameObject,
+        // NetworkManager.Singleton was still null, the early-return skipped the subscription,
+        // and it was NEVER retried — this component would then never hear about a real,
+        // successful connection. The Windows client's Player.log proved exactly this: both
+        // NetworkPlayer objects spawned and the local camera/controls were enabled (so the
+        // connection genuinely succeeded), yet the 8s "no response" watchdog fired anyway and
+        // called Shutdown() on a perfectly good connection, because OnClientConnected was
+        // simply never subscribed, let alone called. Start() is scene-wide guaranteed to run
+        // after every object's OnEnable(), so NetworkManager.Singleton is always set by then.
+        private bool _subscribed;
 
         private void OnDisable()
         {
-            if (NetworkManager.Singleton == null)
+            if (!_subscribed || NetworkManager.Singleton == null)
             {
                 return;
             }
@@ -70,10 +74,23 @@ namespace Shiftworks.Multiplayer
             NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
             NetworkManager.Singleton.OnServerStopped -= OnServerStopped;
+            _subscribed = false;
         }
 
         private void Start()
         {
+            if (NetworkManager.Singleton != null && !_subscribed)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+                NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+                NetworkManager.Singleton.OnServerStopped += OnServerStopped;
+                _subscribed = true;
+            }
+            else if (NetworkManager.Singleton == null)
+            {
+                Debug.LogError("[Shiftworks][MP] NetworkManager.Singleton Start() sırasında hâlâ null — bağlantı olayları dinlenemeyecek.");
+            }
+
             RefreshStatus();
         }
 
@@ -84,6 +101,7 @@ namespace Shiftworks.Multiplayer
                 _clientConnectElapsed += Time.deltaTime;
                 if (_clientConnectElapsed >= clientConnectTimeoutSeconds)
                 {
+                    Debug.Log($"[Shiftworks][MP] Client bağlantı zaman aşımı ({clientConnectTimeoutSeconds}s) — host hiç yanıt vermedi.");
                     FailClientConnectAttempt();
                 }
             }
@@ -112,7 +130,10 @@ namespace Shiftworks.Multiplayer
 
             _clientConnectAttemptPending = false;
             ApplyConnectionAddress();
-            NetworkManager.Singleton.StartHost();
+            bool started = NetworkManager.Singleton.StartHost();
+            Debug.Log(started
+                ? "[Shiftworks][MP] Host başlatma başarılı."
+                : "[Shiftworks][MP] Host başlatma BAŞARISIZ (StartHost false döndü).");
             RefreshStatus();
         }
 
@@ -126,7 +147,11 @@ namespace Shiftworks.Multiplayer
             _clientConnectAttemptPending = true;
             _clientConnectElapsed = 0f;
             ApplyConnectionAddress();
-            NetworkManager.Singleton.StartClient();
+            Debug.Log($"[Shiftworks][MP] Client bağlantı isteği gönderiliyor: {transport?.ConnectionData.Address}:{port}");
+            bool started = NetworkManager.Singleton.StartClient();
+            Debug.Log(started
+                ? "[Shiftworks][MP] StartClient çağrıldı, host yanıtı bekleniyor."
+                : "[Shiftworks][MP] Client bağlantı isteği BAŞARISIZ (StartClient false döndü).");
             RefreshStatus();
         }
 
@@ -137,6 +162,7 @@ namespace Shiftworks.Multiplayer
                 return;
             }
 
+            Debug.Log("[Shiftworks][MP] Bağlantı kullanıcı tarafından kesildi (Bağlantıyı Kes).");
             NetworkManager.Singleton.Shutdown();
             ShowTransientStatus("Durum: Bağlantı kesildi");
         }
@@ -157,26 +183,38 @@ namespace Shiftworks.Multiplayer
 
         private void OnClientConnected(ulong clientId)
         {
+            bool isMe = NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId;
+            Debug.Log(isMe
+                ? "[Shiftworks][MP] Client bağlandı (bu makine)."
+                : $"[Shiftworks][MP] Başka bir client bağlandı: {clientId}.");
             _clientConnectAttemptPending = false;
             RefreshStatus();
         }
 
         private void OnClientDisconnected(ulong clientId)
         {
+            string reason = NetworkManager.Singleton != null ? NetworkManager.Singleton.DisconnectReason : "";
+            Debug.Log($"[Shiftworks][MP] Client bağlantısı kesildi/reddedildi: clientId={clientId}" +
+                (string.IsNullOrEmpty(reason) ? "" : $", sebep: {reason}"));
+
             if (_clientConnectAttemptPending)
             {
                 // The handshake never finished — the host was unreachable, not running,
                 // or rejected the connection.
-                FailClientConnectAttempt();
+                FailClientConnectAttempt(reason);
                 return;
             }
 
             RefreshStatus();
         }
 
-        private void OnServerStopped(bool wasHost) => RefreshStatus();
+        private void OnServerStopped(bool wasHost)
+        {
+            Debug.Log("[Shiftworks][MP] Sunucu/host durduruldu.");
+            RefreshStatus();
+        }
 
-        private void FailClientConnectAttempt()
+        private void FailClientConnectAttempt(string reason = "")
         {
             _clientConnectAttemptPending = false;
             _clientConnectElapsed = 0f;
@@ -186,7 +224,8 @@ namespace Shiftworks.Multiplayer
                 NetworkManager.Singleton.Shutdown();
             }
 
-            ShowTransientStatus("Durum: Bağlantı hatası (Host bulunamadı)");
+            string suffix = string.IsNullOrEmpty(reason) ? "Host bulunamadı" : reason;
+            ShowTransientStatus($"Durum: Bağlantı hatası ({suffix})");
         }
 
         private void ShowTransientStatus(string message)

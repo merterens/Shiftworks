@@ -88,6 +88,13 @@ namespace Shiftworks.Machines
         public string InstanceId { get; private set; }
         public MachineDefinition SourceDefinition { get; private set; }
 
+        /// <summary>(Stage 11C bugfix) Read-only peeks for NetworkMachineController —
+        /// same "outside code only ever reads, never mutates" rule as every other save/sync
+        /// accessor on this class.</summary>
+        public int BufferedInputCount => _bufferedInputCount;
+        public float ProcessingElapsedSeconds => _processingElapsed;
+        public CarryableItem PendingOutput => _pendingOutput;
+
         private float _processingElapsed;
         private CarryableItem _pendingOutput;
         private Vector3 _animatedPartRestPosition;
@@ -414,6 +421,27 @@ namespace Shiftworks.Machines
             {
                 SpawnPendingOutput();
             }
+
+            UpdateStatusColor();
+        }
+
+        /// <summary>(Stage 11C bugfix) Narrower sibling of RestoreProductionState for
+        /// multiplayer display sync on a non-host client — deliberately does NOT touch
+        /// _pendingOutput/HasPower/stats. A save/load restore correctly re-creates the
+        /// pending output locally (a solo session has exactly one simulation to begin
+        /// with); in multiplayer the output item must be created and NetworkObject.Spawn'd
+        /// by the host exactly once (NetworkMachineController's job), never independently
+        /// re-instantiated by every client that happens to receive this state update.</summary>
+        public void RestoreDisplayState(MachineState state, int bufferedInputCount, float processingElapsedSeconds)
+        {
+            State = state;
+            _bufferedInputCount = bufferedInputCount;
+            _processingElapsed = processingElapsedSeconds;
+            Progress = state == MachineState.OutputReady
+                ? 1f
+                : (recipe != null && recipe.ProcessingTimeSeconds > 0f
+                    ? Mathf.Clamp01(_processingElapsed / recipe.ProcessingTimeSeconds)
+                    : 0f);
 
             UpdateStatusColor();
         }
