@@ -46,5 +46,23 @@ namespace Shiftworks.Factory
             ExpansionUnlocked?.Invoke(definition);
             return true;
         }
+
+        /// <summary>(Stage 10) Re-applies a previously-purchased unlock on load —
+        /// deliberately bypasses TryPurchase entirely (no EconomyManager.TrySpend call), the
+        /// player already paid for this in the saved session. Still raises ExpansionUnlocked
+        /// when newly unlocking, so FactoryExpansionGate opens the barrier through its own
+        /// normal, already-correct reaction path rather than needing separate restore code
+        /// there — same "gates only ever read/react, SaveManager never pokes the gate
+        /// directly" boundary as live play.</summary>
+        public void RestoreUnlocked(FactoryExpansionDefinition definition)
+        {
+            if (definition == null || IsUnlocked(definition))
+            {
+                return;
+            }
+
+            _unlocked.Add(definition);
+            ExpansionUnlocked?.Invoke(definition);
+        }
     }
 }

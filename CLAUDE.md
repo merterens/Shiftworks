@@ -14,8 +14,11 @@ hedefli, **1–8 oyunculu online co-op** hedefleniyor (mimari host-authoritative
   UI paketi **eklenmedi**.
 - **Netcode for GameObjects (2.13.3)** + **Unity Transport (2.7.4)** — multiplayer teknik
   prototipi için eklendi (bkz. Multiplayer Hedefi).
-- Sahneler: `Assets/_Project/Scenes/WorkshopPrototype.unity` (asıl tek oyunculu oyun sahnesi)
-  ve `Assets/_Project/Scenes/MultiplayerPrototype.unity` (ayrı, minimal multiplayer test sahnesi).
+- Sahneler: `Assets/_Project/Scenes/WorkshopPrototype.unity` (asıl tek oyunculu oyun sahnesi),
+  `Assets/_Project/Scenes/MultiplayerPrototype.unity` (ayrı, minimal multiplayer test sahnesi)
+  ve **(Aşama 11A)** `Assets/_Project/Scenes/WorkshopMultiplayer.unity` (gerçek fabrikanın
+  `AssetDatabase.CopyAsset` ile alınmış güvenli bir kopyası + ağ katmanı — `WorkshopPrototype.
+  unity`'nin kendisi hiç açılıp üzerine yazılmadı).
 
 ## Mevcut Kod Mimarisi
 Tüm oyun kodu `Assets/_Project/Scripts/` altında, namespace'e göre klasörlenmiş:
@@ -31,10 +34,11 @@ Tüm oyun kodu `Assets/_Project/Scripts/` altında, namespace'e göre klasörlen
 | `Economy` | `EconomyManager` |
 | `Factory` | **(Aşama 7)** `FactoryExpansionDefinition`, `FactoryExpansionManager` (satın alma/kilit açma — tek yetkili durum), `FactoryExpansionGate` (bariyer, sadece durumu okur), `FactoryExpansionTerminal` |
 | `Power` | **(Aşama 8)** `IPowerConsumer`, `PowerManager` (kapasite/tahsis — tek yetkili durum), `ProductionStatsTracker` (fabrika geneli üretim sayacı), `PowerPanelTerminal` |
-| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD` (genel bildirim desteğiyle), `OrderBoardPanelUI`, `MachineShopPanelUI`, **(Aşama 7)** `FactoryExpansionPanelUI`, **(Aşama 8)** `PowerPanelUI` |
-| `Multiplayer` | `NetworkPlayerSetup`, `MultiplayerConnectionUI` — yalnızca `MultiplayerPrototype.unity` sahnesinde kullanılır, tek oyunculu sistemlerden bağımsız |
+| `UI` | `InteractionPromptUI` (bakış göstergesi), `GameHUD` (genel bildirim desteğiyle), `OrderBoardPanelUI`, `MachineShopPanelUI`, **(Aşama 7)** `FactoryExpansionPanelUI`, **(Aşama 8)** `PowerPanelUI`, **(Aşama 10)** `SaveLoadMenuUI` |
+| `Multiplayer` | `NetworkPlayerSetup`, `MultiplayerConnectionUI` — `MultiplayerPrototype.unity` **ve (Aşama 11A)** `WorkshopMultiplayer.unity` sahnelerinde, değiştirilmeden yeniden kullanılıyor; tek oyunculu sistemlerden bağımsız. **(Aşama 11A)** `MultiplayerSpawnPoints` — host tarafı `ConnectionApprovalCallback` ile 2 oyuncuya ayrı spawn noktası atar. **(Aşama 11B)** `NetworkEconomyBridge` — paylaşılan bakiye + bekleyen makine sayılarını `NetworkVariable`/`NetworkList` ile tek yönlü senkronize eder, satın alma/yerleştirme isteklerini host'a yönlendirir (`EconomyManager`/`MachinePurchaseManager`'ın kendisi değişmedi) |
 | `Debugging` | **(Aşama 9)** `DevelopmentCheats` — F8 ile +10.000 $ test parası, tamamen `#if UNITY_EDITOR` içinde, Steam/release build'de inert |
-| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup`, `ShiftworksMachineShopSetup`, `ShiftworksMultiplayerPrototypeSetup`, **(Aşama 7)** `ShiftworksFactoryExpansionSetup`, **(Aşama 8)** `ShiftworksPowerSetup`, **(Aşama 9)** `ShiftworksAssemblyProductionSetup`, `ShiftworksDevToolsSetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`) |
+| `SaveSystem` | **(Aşama 10)** `SaveManager` (kaydet/yükle — tek yetkili orkestratör, her sistemin KENDİ Capture*/Restore* uç noktalarını çağırır), `SaveGameData` (JSON'a giden düz veri sınıfları), `SaveCatalog` (ID↔asset çözümleyici), `SaveFileHandler` (güvenli dosya I/O — geçici dosya + yedek) |
+| `Editor` | `ShiftworksSceneSetup`, `ShiftworksInteractionSetup`, `ShiftworksProductionSetup`, `ShiftworksAutomationSetup`, `ShiftworksOrdersSetup`, `ShiftworksMachineShopSetup`, `ShiftworksMultiplayerPrototypeSetup`, **(Aşama 7)** `ShiftworksFactoryExpansionSetup`, **(Aşama 8)** `ShiftworksPowerSetup`, **(Aşama 9)** `ShiftworksAssemblyProductionSetup`, `ShiftworksDevToolsSetup`, **(Aşama 10)** `ShiftworksSaveSetup`, **(Aşama 11A)** `ShiftworksWorkshopMultiplayerSetup`, **(Aşama 11B)** `ShiftworksMultiplayerEconomySetup` — idempotent sahne/prefab kurulum araçları (menü: `Shiftworks/Setup/...`, en son kullanılan numara: 32) |
 
 **Tasarım ilkeleri (tüm sistemlerde tutarlı şekilde uygulanıyor):**
 - Her sistemin durumu **tek bir yetkili kaynaktan** yönetilir (`MachineController.State`,
@@ -70,9 +74,23 @@ içeriği doğru kurulu), en olası açıklama Play'e basılırken Editor'de `Mu
 yerine `WorkshopPrototype.unity`'nin açık olmasıydı. Ayrıntılar ve adım adım test talimatı
 `docs/PROJECT_STATUS.md`'de. **Bu, oyunun bütün sistemlerinin multiplayer olduğu anlamına gelmez** — sadece
 oyuncu hareketi/kamerası (owner-authoritative `NetworkTransform`) senkronize edildi; eşya
-taşıma, üretim, sipariş, ekonomi ve makine yerleştirme hâlâ tamamen yerel/tek-oyunculu. Gerçek
-host-authoritative entegrasyon (sunucunun her işlemi doğrulaması) Aşama 18'de ele alınacak.
-Ayrıntılar için `docs/PROJECT_STATUS.md`.
+taşıma, üretim, sipariş, ekonomi ve makine yerleştirme hâlâ tamamen yerel/tek-oyunculu.
+
+**Aşama 11 ("gerçek host-authoritative 2 oyunculu multiplayer co-op") başladı** — eski
+roadmap'teki Aşama 18 ile aynı iş, kullanıcı tarafından öne çekildi ve kullanıcının isteğiyle
+**11A-11E** alt aşamalarına bölündü (her biri kullanıcı testiyle onaylanmadan sıradakine
+geçilmiyor). **11A kullanıcı tarafından test edildi ve onaylandı**: gerçek fabrikanın güvenli
+bir kopyası (`WorkshopMultiplayer.unity`) üzerinde, yukarıdaki prototipin
+`NetworkPlayer.prefab`/`NetworkPlayerSetup`/`MultiplayerConnectionUI`'si **hiç değiştirilmeden**
+yeniden kullanılarak iki oyuncu bağlanıp hareket edebiliyor; tek yeni script
+`MultiplayerSpawnPoints` (host'un `ConnectionApprovalCallback`'i ile 2 ayrı spawn noktası
+ataması — "aynı yerde doğup sıkışma" sorununu çözer). Onay sonrası **11B geliştirildi —
+kullanıcı testleri bekleniyor**: paylaşılan bakiye + makine satın alma/yerleştirme
+host-authoritative hale geldi (`NetworkEconomyBridge`, `EconomyManager`/
+`MachinePurchaseManager`'ın kendisi değişmeden), `NetworkPlayer.prefab`'a artık
+`PlayerInteractor`/`MachinePlacementController` da eklendi. Siparişler/elektrik/genişletme ve
+üretim durumu/eşya taşımanın senkronizasyonu hâlâ 11C-11E'de. Ayrıntılar için
+`docs/PROJECT_STATUS.md`.
 
 ## Proje Belgeleri — Her Yeni Oturumda Okunmalı
 1. **Bu dosya (`CLAUDE.md`)** — genel bağlam.

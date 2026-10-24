@@ -1,4 +1,6 @@
+using System;
 using Shiftworks.Machines;
+using Shiftworks.Multiplayer;
 using Shiftworks.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -51,6 +53,7 @@ namespace Shiftworks.Player
         private Quaternion _currentPlacementRotation;
         private string _lastLoggedReason = "";
         private readonly Collider[] _overlapBuffer = new Collider[8];
+        private bool _waitingForNetworkResult;
 
         private void Awake()
         {
@@ -131,7 +134,8 @@ namespace Shiftworks.Player
             UpdateGhostPose();
             ShowHint();
 
-            if (_currentPlacementValid && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            if (_currentPlacementValid && !_waitingForNetworkResult &&
+                Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 ConfirmPlacement();
             }
@@ -228,13 +232,61 @@ namespace Shiftworks.Player
 
         private void ConfirmPlacement()
         {
+            // (Stage 11B) Route through the host when a NetworkEconomyBridge exists — on the
+            // host this still resolves synchronously below, but a remote client's placement
+            // has to be validated and spawned by the host (same shared pending-purchase pool
+            // and the host-spawned NetworkObject everyone needs to see). Single-player keeps
+            // the exact original direct TryConsumePending + Instantiate call.
+            NetworkEconomyBridge bridge = NetworkEconomyBridge.Instance;
+            if (bridge != null)
+            {
+                _waitingForNetworkResult = true;
+                bridge.RequestPlacement(_pendingDefinition, _currentPlacementPosition,
+                    _currentPlacementRotation.eulerAngles.y, HandleNetworkPlacementResult);
+                return;
+            }
+
             if (_purchaseManager == null || !_purchaseManager.TryConsumePending(_pendingDefinition))
             {
                 return;
             }
 
-            Instantiate(_pendingDefinition.MachinePrefab, _currentPlacementPosition, _currentPlacementRotation);
+            GameObject placed = Instantiate(_pendingDefinition.MachinePrefab, _currentPlacementPosition, _currentPlacementRotation);
+
+            // (Stage 10) Tags this instance as player-placed with a stable identity, purely
+            // for SaveManager — it needs to tell "re-instantiate this from its
+            // MachineDefinition on load" apart from a scene-baked original (already present
+            // after a scene reload, only its production state needs restoring).
+            MachineController placedController = placed.GetComponent<MachineController>();
+            if (placedController != null)
+            {
+                placedController.MarkAsPlayerPlaced(Guid.NewGuid().ToString("N"), _pendingDefinition);
+            }
+
             EndPlacement();
+        }
+
+        private void HandleNetworkPlacementResult(bool success, string reason)
+        {
+            _waitingForNetworkResult = false;
+
+            if (!IsActive)
+            {
+                // Placement mode was cancelled (Escape) while the request was in flight —
+                // nothing left to update.
+                return;
+            }
+
+            if (success)
+            {
+                EndPlacement();
+                return;
+            }
+
+            if (promptUI != null)
+            {
+                promptUI.Show(reason);
+            }
         }
 
         private void EndPlacement()

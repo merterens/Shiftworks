@@ -18,5 +18,13 @@ namespace Shiftworks.Power
         {
             TotalUnitsProduced++;
         }
+
+        /// <summary>(Stage 10) Overwrites the total for a save restore — the counters from
+        /// the saved session are re-applied once, not replayed event-by-event, so loading
+        /// can never double-count a unit that was already counted when it was first produced.</summary>
+        public void RestoreTotal(int totalUnitsProduced)
+        {
+            TotalUnitsProduced = Mathf.Max(0, totalUnitsProduced);
+        }
     }
 }

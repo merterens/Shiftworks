@@ -80,6 +80,14 @@ namespace Shiftworks.Machines
         public float TotalProcessingSeconds { get; private set; }
         public float TotalPowerWaitSeconds { get; private set; }
 
+        /// <summary>(Stage 10) True only for an instance Instantiate()'d at runtime via
+        /// MachinePlacementController (a shop purchase) — false for the scene-baked original.
+        /// SaveManager uses this to tell "re-instantiate from SourceDefinition on load" apart
+        /// from "already exists in the freshly-loaded scene, just restore its state".</summary>
+        public bool IsPlayerPlaced { get; private set; }
+        public string InstanceId { get; private set; }
+        public MachineDefinition SourceDefinition { get; private set; }
+
         private float _processingElapsed;
         private CarryableItem _pendingOutput;
         private Vector3 _animatedPartRestPosition;
@@ -119,6 +127,16 @@ namespace Shiftworks.Machines
             {
                 powerManager.Unregister(this);
             }
+        }
+
+        /// <summary>Called once by MachinePlacementController right after Instantiate(),
+        /// before this machine has done anything else — purely identity bookkeeping for
+        /// SaveManager, no gameplay effect.</summary>
+        public void MarkAsPlayerPlaced(string instanceId, MachineDefinition sourceDefinition)
+        {
+            IsPlayerPlaced = true;
+            InstanceId = instanceId;
+            SourceDefinition = sourceDefinition;
         }
 
         private void Update()
@@ -311,19 +329,7 @@ namespace Shiftworks.Machines
             }
             HasPower = false;
 
-            if (recipe.OutputItem != null && recipe.OutputItem.WorldPrefab != null && outputSpawnPoint != null)
-            {
-                GameObject spawned = Instantiate(recipe.OutputItem.WorldPrefab, outputSpawnPoint.position, outputSpawnPoint.rotation);
-                _pendingOutput = spawned.GetComponent<CarryableItem>();
-
-                // Only mark it automated (kinematic, not manually grabbable) if an output
-                // conveyor is actually wired. A standalone Stage 3-style machine keeps
-                // producing a perfectly normal, manually-collectible item.
-                if (_outputReceiver != null)
-                {
-                    _pendingOutput.BeginAutomatedTransport(outputSpawnPoint.position);
-                }
-            }
+            SpawnPendingOutput();
 
             State = MachineState.OutputReady;
             Progress = 1f;
@@ -332,6 +338,81 @@ namespace Shiftworks.Machines
             if (statsTracker != null)
             {
                 statsTracker.RecordUnitCompleted();
+            }
+
+            UpdateStatusColor();
+        }
+
+        /// <summary>Shared by CompleteProcessing (a cycle just finished) and
+        /// RestoreProductionState (a save said a cycle had already finished) — the only
+        /// place _pendingOutput is ever created, so both paths spawn it identically.</summary>
+        private void SpawnPendingOutput()
+        {
+            if (recipe.OutputItem == null || recipe.OutputItem.WorldPrefab == null || outputSpawnPoint == null)
+            {
+                return;
+            }
+
+            GameObject spawned = Instantiate(recipe.OutputItem.WorldPrefab, outputSpawnPoint.position, outputSpawnPoint.rotation);
+            _pendingOutput = spawned.GetComponent<CarryableItem>();
+
+            // Only mark it automated (kinematic, not manually grabbable) if an output
+            // conveyor is actually wired. A standalone Stage 3-style machine keeps
+            // producing a perfectly normal, manually-collectible item.
+            if (_outputReceiver != null)
+            {
+                _pendingOutput.BeginAutomatedTransport(outputSpawnPoint.position);
+            }
+        }
+
+        /// <summary>(Stage 10) Read-only snapshot of everything SaveManager needs to
+        /// reconstruct this machine's production cycle — never mutates anything, same
+        /// "visual/save code reads, never writes" rule as the status-color logic.</summary>
+        public MachineProductionSnapshot CaptureProductionState()
+        {
+            return new MachineProductionSnapshot
+            {
+                State = State,
+                BufferedInputCount = _bufferedInputCount,
+                ProcessingElapsedSeconds = _processingElapsed,
+                HasPendingOutput = _pendingOutput != null,
+                CompletedCount = CompletedCount,
+                TotalProcessingSeconds = TotalProcessingSeconds,
+                TotalPowerWaitSeconds = TotalPowerWaitSeconds,
+            };
+        }
+
+        /// <summary>(Stage 10) Controlled restore entry point — sets state directly instead
+        /// of going through TryAcceptInput/CompleteProcessing, since nothing is actually
+        /// being consumed or produced right now, only re-applied. Only ever called by
+        /// SaveManager, immediately after Awake() (so Register() has already run) and
+        /// before the first Update().</summary>
+        public void RestoreProductionState(MachineProductionSnapshot snapshot)
+        {
+            _bufferedInputCount = snapshot.BufferedInputCount;
+            State = snapshot.State;
+            _processingElapsed = snapshot.ProcessingElapsedSeconds;
+            Progress = recipe != null && recipe.ProcessingTimeSeconds > 0f
+                ? Mathf.Clamp01(_processingElapsed / recipe.ProcessingTimeSeconds)
+                : 0f;
+            CompletedCount = snapshot.CompletedCount;
+            TotalProcessingSeconds = snapshot.TotalProcessingSeconds;
+            TotalPowerWaitSeconds = snapshot.TotalPowerWaitSeconds;
+            HasPower = false;
+
+            if (State == MachineState.Processing)
+            {
+                // Re-request the exact allocation this machine held when saved. If capacity
+                // is tight now (e.g. another restored machine claimed it first), this
+                // correctly refuses and HasPower stays false — Update()'s existing HasPower
+                // gate then simply waits, exactly like a live power shortage mid-cycle
+                // (Stage 8), rather than fabricating power or losing progress.
+                HasPower = powerManager != null && powerManager.TryRequestPower(this);
+            }
+
+            if (State == MachineState.OutputReady && snapshot.HasPendingOutput)
+            {
+                SpawnPendingOutput();
             }
 
             UpdateStatusColor();
@@ -381,5 +462,19 @@ namespace Shiftworks.Machines
             float offset = Mathf.Sin(Time.time * animationSpeed) * animationAmplitude;
             animatedPart.localPosition = _animatedPartRestPosition + new Vector3(0f, offset, 0f);
         }
+    }
+
+    /// <summary>(Stage 10) Plain carrier for MachineController's production state — not a
+    /// MonoBehaviour/ScriptableObject, so SaveManager can freely copy its fields into/out of
+    /// a JSON-serializable save record without touching Unity object references.</summary>
+    public struct MachineProductionSnapshot
+    {
+        public MachineState State;
+        public int BufferedInputCount;
+        public float ProcessingElapsedSeconds;
+        public bool HasPendingOutput;
+        public int CompletedCount;
+        public float TotalProcessingSeconds;
+        public float TotalPowerWaitSeconds;
     }
 }

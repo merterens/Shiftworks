@@ -44,6 +44,11 @@ namespace Shiftworks.Conveyors
         public float PowerDemandKw => powerDemandKw;
         public bool HasPower { get; private set; }
 
+        /// <summary>(Stage 10) Read-only peek at what's aboard, purely for SaveManager — the
+        /// belt's own TryAccept/TryHandOff logic is the only thing that ever decides to
+        /// place or remove an occupant during normal play.</summary>
+        public ItemDefinition OccupantDefinition => _occupant != null ? _occupant.Definition : null;
+
         private IConveyorReceiver _nextReceiver;
         private CarryableItem _occupant;
         private float _progress;
@@ -133,6 +138,38 @@ namespace Shiftworks.Conveyors
             {
                 TryHandOff();
             }
+        }
+
+        /// <summary>(Stage 10) Forces this segment's occupant for a save restore — skips the
+        /// IsOccupied/power gate TryAccept enforces during normal play, since this is a
+        /// controlled one-time reconstruction (called right after a fresh scene load, before
+        /// anything else has had a chance to occupy this segment) rather than a live gameplay
+        /// hand-off. Places the item at the segment's start, same simplification used for
+        /// every restored conveyor occupant — see SaveManager's class doc for why exact
+        /// mid-belt position isn't preserved.</summary>
+        public void RestoreOccupant(CarryableItem item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            _occupant = item;
+            _progress = 0f;
+            item.BeginAutomatedTransport(startPoint.position);
+        }
+
+        /// <summary>(Stage 10) Clears a stale occupant before a load-while-playing restore —
+        /// a no-op on a fresh scene load, where every segment already starts empty.</summary>
+        public void ClearOccupant()
+        {
+            if (_occupant != null)
+            {
+                Destroy(_occupant.gameObject);
+            }
+
+            _occupant = null;
+            _progress = 0f;
         }
 
         private void TryHandOff()

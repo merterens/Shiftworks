@@ -38,5 +38,14 @@ namespace Shiftworks.Economy
             Balance -= amount;
             return true;
         }
+
+        /// <summary>(Stage 10) Overwrites the balance directly for a save restore — the one
+        /// deliberate exception to "only AddFunds/TrySpend touch Balance", since this isn't
+        /// a gameplay income/expense, it's re-applying the exact figure a previous session
+        /// already ended with (startingBalance is never re-added on top of it).</summary>
+        public void RestoreBalance(int balance)
+        {
+            Balance = Mathf.Max(0, balance);
+        }
     }
 }

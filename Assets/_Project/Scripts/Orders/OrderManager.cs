@@ -34,9 +34,16 @@ namespace Shiftworks.Orders
 
         public int GetProgress(OrderDefinition order) => Find(order)?.ProgressCount ?? 0;
 
+        public bool IsRewardClaimed(OrderDefinition order) => Find(order)?.RewardClaimed ?? false;
+
         public bool HasActiveOrder => FindActive() != null;
 
         public OrderDefinition ActiveOrder => FindActive()?.Definition;
+
+        /// <summary>(Stage 10) Read-only list of every order this manager tracks, in the
+        /// same order as the Inspector-configured availableOrders — SaveManager needs this
+        /// to enumerate and save every order's state, not just the currently active one.</summary>
+        public IReadOnlyList<OrderDefinition> AvailableOrders => availableOrders;
 
         public bool TryAcceptOrder(OrderDefinition order)
         {
@@ -101,6 +108,26 @@ namespace Shiftworks.Orders
 
             Debug.Log($"[Shiftworks] Sipariş tamamlandı: '{order.OrderName}' (ReadyToShip -> Completed), +{runtime.Definition.Reward} $.");
             return true;
+        }
+
+        /// <summary>(Stage 10) Controlled restore entry point — sets an order's state
+        /// directly instead of replaying TryAcceptOrder/TryRegisterPackedItem/TryCompleteOrder,
+        /// since nothing is actually being accepted/packed/delivered right now, only
+        /// re-applied from a save. Deliberately bypasses HasActiveOrder/RewardClaimed guards
+        /// (restoring the one order that WAS active, or a Completed order's already-claimed
+        /// flag, is exactly what those guards exist to protect) — never reachable from normal
+        /// gameplay, only from SaveManager.</summary>
+        public void RestoreOrderState(OrderDefinition order, OrderState state, int progressCount, bool rewardClaimed)
+        {
+            OrderRuntime runtime = Find(order);
+            if (runtime == null)
+            {
+                return;
+            }
+
+            runtime.State = state;
+            runtime.ProgressCount = progressCount;
+            runtime.RewardClaimed = rewardClaimed;
         }
 
         private OrderRuntime Find(OrderDefinition order)

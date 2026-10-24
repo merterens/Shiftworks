@@ -1,6 +1,7 @@
 using System;
 using Shiftworks.Economy;
 using Shiftworks.Machines;
+using Shiftworks.Multiplayer;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -90,11 +91,27 @@ namespace Shiftworks.UI
                 return;
             }
 
-            bool success = _purchaseManager.TryPurchase(_definition);
+            // (Stage 11B) When a NetworkEconomyBridge exists (WorkshopMultiplayer.unity),
+            // route through it instead of calling TryPurchase directly — on the host this is
+            // still synchronous and identical to the line below, but a remote client's
+            // request has to reach the host first. Single-player (no bridge in the scene)
+            // keeps the exact original direct call.
+            NetworkEconomyBridge bridge = NetworkEconomyBridge.Instance;
+            if (bridge != null)
+            {
+                bridge.RequestPurchase(_definition, ShowPurchaseResult);
+                return;
+            }
+
+            ShowPurchaseResult(_purchaseManager.TryPurchase(_definition), "Yetersiz bakiye!");
+        }
+
+        private void ShowPurchaseResult(bool success, string reason)
+        {
             if (warningText != null)
             {
                 warningText.enabled = !success;
-                warningText.text = "Yetersiz bakiye!";
+                warningText.text = reason;
             }
 
             Refresh();

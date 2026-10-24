@@ -47,6 +47,21 @@ namespace Shiftworks.Machines
             return true;
         }
 
+        /// <summary>(Stage 11B) Directly overwrites a pending count for network sync on
+        /// non-host clients — the host's MachinePurchaseManager already ran the real
+        /// TryPurchase/TryConsumePending; this just mirrors the resulting shared count
+        /// without spending money or consuming a pending slot a second time. Same
+        /// "RestoreX" exception pattern as EconomyManager.RestoreBalance.</summary>
+        public void RestorePendingCount(MachineDefinition definition, int count)
+        {
+            if (definition == null)
+            {
+                return;
+            }
+
+            _pendingCounts[definition] = Mathf.Max(0, count);
+        }
+
         public bool TryConsumePending(MachineDefinition definition)
         {
             int count = GetPendingCount(definition);

@@ -36,12 +36,16 @@ namespace Shiftworks.Player
 
         /// <summary>
         /// Set by PlayerInteractor during machine placement mode. Movement/look stay fully
-        /// active (the player can walk around to find a spot) but Escape/click must NOT
-        /// toggle the cursor lock here, since MachinePlacementController owns Escape (cancel)
-        /// and left-click (confirm) for the duration — without this, HandleCursorToggle would
-        /// also react to the same Escape press and unlock the cursor after placement ends.
+        /// active (the player can walk around to find a spot) but left-click must NOT
+        /// re-lock the cursor here, since MachinePlacementController owns left-click
+        /// (confirm placement) for the duration — without this, HandleCursorToggle would
+        /// also react to that same click.
         /// </summary>
         public bool SuppressCursorToggle { get; set; }
+
+        /// <summary>(Stage 10) Current vertical look angle, for SaveManager to capture —
+        /// read-only mirror of the same _verticalRotation ApplyLook/SetLookRotation write.</summary>
+        public float CurrentPitch => _verticalRotation;
 
         private CharacterController _controller;
         private PlayerInputActions _input;
@@ -93,16 +97,41 @@ namespace Shiftworks.Player
             ApplyMovement();
         }
 
+        /// <summary>
+        /// (Stage 10 fix) Escape used to be handled here too (a bare cursor-unlock) — removed.
+        /// With two components independently reacting to the same key press, whichever one's
+        /// Update() Unity happened to call first would win: if this ran before
+        /// PlayerInteractor's own Update(), the cursor was already unlocked by the time
+        /// PlayerInteractor checked Cursor.lockState, so it took its "not locked, do nothing"
+        /// early-out and never reached its own Escape handling — the Save/Load menu then
+        /// never opened, only the cursor appeared, exactly the "sadece mouse imleci geliyor"
+        /// symptom this fixes. PlayerInteractor.HandleEscapeKey is now the single place that
+        /// decides what Escape does (open the menu, or — if no menu is wired — fall back to
+        /// unlocking the cursor itself), the same way it already exclusively owns E/G.
+        /// </summary>
         private void HandleCursorToggle()
         {
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            {
-                UnlockCursor();
-            }
-            else if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
-                     Cursor.lockState != CursorLockMode.Locked)
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
+                Cursor.lockState != CursorLockMode.Locked)
             {
                 LockCursor();
+            }
+        }
+
+        /// <summary>(Stage 10) Restores a saved look direction — sets both the visible
+        /// cameraPivot rotation AND the internal _verticalRotation it's derived from, so the
+        /// very next mouse-look update continues smoothly from here instead of snapping back
+        /// to whatever _verticalRotation held before (0 by default on a fresh scene load).
+        /// Yaw is applied to this transform directly, exactly like ApplyLook's own
+        /// transform.Rotate does, just as an absolute set instead of a delta.</summary>
+        public void SetLookRotation(float yaw, float pitch)
+        {
+            transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            _verticalRotation = Mathf.Clamp(pitch, minVerticalAngle, maxVerticalAngle);
+
+            if (cameraPivot != null)
+            {
+                cameraPivot.localRotation = Quaternion.Euler(_verticalRotation, 0f, 0f);
             }
         }
 
@@ -110,12 +139,6 @@ namespace Shiftworks.Player
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
-        }
-
-        private void UnlockCursor()
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
         }
 
         private void ApplyLook()

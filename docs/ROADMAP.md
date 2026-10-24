@@ -14,15 +14,15 @@ tamamlandığında `docs/PROJECT_STATUS.md` güncellenmelidir.
 | 7 | Fabrika genişletme — hazır üretim alanı satın alma ("Üretim Alanı B") | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
 | 8 | Elektrik kapasitesi, makine güç tüketimi ve üretim verimliliği | ✅ Tamamlandı (18/18 kullanıcı testi) |
 | 9 | Yeni ürünler, makineler ve çok aşamalı üretim (montaj makinesi, AssembledComponent) | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
-| 10 | Makine yükseltmeleri (hız/kalite/kapasite seviyeleri) | Planlandı |
-| 11 | Konveyör inşa modu (oyuncunun serbestçe hat kurması) | Planlandı |
-| 12 | Forklift ve lojistik (araçla taşıma, toplu nakliye) | Planlandı |
-| 13 | Gece-gündüz döngüsü ve vardiya sistemi | Planlandı |
-| 14 | Uyuma ve sabaha geçme (zaman atlama, enerji/yorgunluk) | Planlandı |
-| 15 | Kapı kilitleri, hırsızlık ve güvenlik sistemleri | Planlandı |
-| 16 | Makine eskimesi, arızalar ve tamir mekanikleri | Planlandı |
-| 17 | Kayıt / yükleme sistemi (save/load) | Planlandı |
-| 18 | Online co-op ağ altyapısı (host-authoritative, Netcode/RPC) | Planlandı |
+| 10 | Kayıt / yükleme sistemi (save/load) | 🛠️ Geliştirildi — kullanıcı testleri bekleniyor |
+| 11 | Gerçek host-authoritative 2 oyunculu multiplayer co-op (Netcode/RPC entegrasyonu) | 🛠️ **11A onaylandı, 11B geliştirildi — kullanıcı testleri bekleniyor** (11C-11E planlandı) |
+| 12 | Konveyör inşa modu (oyuncunun serbestçe hat kurması) | Planlandı |
+| 13 | Forklift ve lojistik (araçla taşıma, toplu nakliye) | Planlandı |
+| 14 | Gece-gündüz döngüsü ve vardiya sistemi | Planlandı |
+| 15 | Uyuma ve sabaha geçme (zaman atlama, enerji/yorgunluk) | Planlandı |
+| 16 | Kapı kilitleri, hırsızlık ve güvenlik sistemleri | Planlandı |
+| 17 | Makine eskimesi, arızalar ve tamir mekanikleri | Planlandı |
+| 18 | Makine yükseltmeleri (hız/kalite/kapasite seviyeleri) | Planlandı |
 | 19 | Steam entegrasyonu ve davet sistemi (Steamworks, lobi) | Planlandı |
 | 20 | Görsel cila, animasyon, ses tasarımı, optimizasyon ve Steam yayına hazırlık | Planlandı |
 
@@ -40,8 +40,14 @@ düzeltildi. Kök neden araştırması ve adım adım test talimatı `docs/PROJE
 edildi (owner-authoritative `NetworkTransform`). Eşya taşıma, üretim, konveyör, sipariş,
 ekonomi ve makine yerleştirme sistemlerinin **hiçbiri** henüz ağ üzerinden yönetilmiyor — bu
 sistemlerin tamamı hâlâ yerel/tek-oyunculu mantıkla çalışıyor. Gerçek "sunucu her işlemi
-doğrular" host-authoritative mimarisi (tam multiplayer), hâlâ **Aşama 18**'de, oyunun asıl
-sistemleriyle (ekonomi/üretim/envanter) birlikte ele alınacak.
+doğrular" host-authoritative mimarisi (tam multiplayer) artık **Aşama 11** kapsamına taşındı
+(eski Aşama 18 ile aynı iş — bkz. "Notlar"daki Aşama 11 kaydırma açıklaması) ve **Aşama 11A**
+ile başladı: gerçek `WorkshopPrototype.unity` fabrikasının güvenli bir kopyası
+(`WorkshopMultiplayer.unity`) üzerinde, bu prototipteki aynı `NetworkPlayer.prefab`/
+`NetworkPlayerSetup`/`MultiplayerConnectionUI` kodu değiştirilmeden yeniden kullanılarak iki
+oyuncunun bağlanıp hareket etmesi sağlandı. Ekonomi/üretim/envanterin host-authoritative hale
+gelmesi 11B-11D'de, kayıt/yükleme ve bağlantı kopması 11E'de ele alınacak. Ayrıntılar
+`docs/PROJECT_STATUS.md`'de.
 
 ## Notlar
 - Sıralama kesin değildir; bağımlılıklara göre (örn. elektrik sisteminin makine yükseltmelerinden
@@ -67,3 +73,16 @@ sistemleriyle (ekonomi/üretim/envanter) birlikte ele alınacak.
   kayıt/yükleme, makine arızaları/bakım, elektrik faturası, yeni fabrika genişleme alanları,
   Steam entegrasyonu ve multiplayer üretim senkronizasyonu **bilinçli olarak kapsam dışı**
   bırakıldı. Ayrıntılar için `docs/PROJECT_STATUS.md`.
+- Aşama 10 ("Kayıt / yükleme sistemi") kullanıcı tarafından doğrudan bu sırayla talep edildi —
+  bu belgenin orijinal sırasında 17. sıradaydı. "Makine yükseltmeleri" (eski 10) onun yerine
+  17'ye kaydı; 11-16 arası değişmedi. Steam Cloud, çoklu kayıt yuvası, otomatik kayıt,
+  multiplayer save/load, şifreleme ve kapsamlı sürüm migration'ı **bilinçli olarak kapsam
+  dışı** bırakıldı. Ayrıntılar için `docs/PROJECT_STATUS.md`.
+- Aşama 11 ("Gerçek host-authoritative 2 oyunculu multiplayer co-op") kullanıcı tarafından
+  doğrudan bu sırayla talep edildi — bu belgenin orijinal sırasında 18. sıradaydı ("Online
+  co-op ağ altyapısı"). Eski 11-17 ("Konveyör inşa modu" → "Makine yükseltmeleri") bir basamak
+  kaydırılıp 12-18 oldu; 19-20 değişmedi. Kullanıcı bu aşamayı açıkça 5 alt aşamaya böldü
+  (11A: bağlantı + hareket, 11B: ekonomi/makine, 11C: eşya/üretim/konveyör, 11D: elektrik/
+  sipariş/paketleme/genişletme, 11E: host kayıt-yükleme/bağlantı kopması) ve her alt aşamanın
+  kullanıcı testiyle onaylanmadan bir sonrakine geçilmemesini istedi. Bu oturumda **yalnızca
+  11A** uygulandı. Ayrıntılar için `docs/PROJECT_STATUS.md`.

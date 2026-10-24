@@ -21,6 +21,13 @@ namespace Shiftworks.Conveyors
         public int StoredCount { get; private set; }
         public bool IsFull => StoredCount >= capacity;
 
+        /// <summary>(Stage 10) Overwrites the count for a save restore — storage only ever
+        /// tracks a count, never GameObjects, so there is nothing else to reconstruct here.</summary>
+        public void RestoreStoredCount(int count)
+        {
+            StoredCount = Mathf.Clamp(count, 0, capacity);
+        }
+
         public string InteractionPrompt =>
             StoredCount > 0
                 ? $"E - {acceptedItem.DisplayName} Al ({StoredCount}/{capacity})"

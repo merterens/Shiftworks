@@ -23,8 +23,17 @@ namespace Shiftworks.Player
         [SerializeField] private float interactionDistance = 3f;
         [SerializeField] private float throwForce = 8f;
 
+        [Header("Save/Load (Stage 10)")]
+        [SerializeField] private SaveLoadMenuUI saveLoadMenuUI;
+
         public Transform HoldPoint => holdPoint;
         public Collider BodyCollider => _characterController;
+        public CharacterController Controller => _characterController;
+
+        /// <summary>(Stage 10) Read-only peek at what's currently held, purely for
+        /// SaveManager to capture — mirrors the MachineController/ConveyorSegment pattern of
+        /// a save-only read accessor that never lets outside code mutate the real field.</summary>
+        public CarryableItem CarriedItem => _carriedItem;
 
         /// <summary>True while a modal UI panel (order board) owns input/cursor.</summary>
         public bool IsInputSuspended { get; private set; }
@@ -70,10 +79,72 @@ namespace Shiftworks.Player
                 HandleInteractKey();
             }
 
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                HandleEscapeKey();
+            }
+
             if (_carriedItem != null)
             {
                 TryHandleDropOrThrow();
             }
+        }
+
+        /// <summary>
+        /// (Stage 10) Only ever reached while nothing else is suspending input (the IsInputSuspended
+        /// guard at the top of Update() already excludes every other open panel), so this can
+        /// never fight an order/shop/power/expansion panel's own Escape-to-close handling —
+        /// each of those still closes itself exactly as before. PlayerInteractor is now the
+        /// ONLY thing that reacts to a bare Escape press (FirstPersonController no longer
+        /// does) — two independent handlers racing on the same key was exactly the bug where
+        /// pressing Escape sometimes only freed the cursor and never opened the menu,
+        /// depending on which component's Update() Unity happened to run first that frame.
+        /// </summary>
+        private void HandleEscapeKey()
+        {
+            if (saveLoadMenuUI != null)
+            {
+                SuspendForUI();
+                saveLoadMenuUI.Open(ResumeFromUI);
+                return;
+            }
+
+            // No Save/Load menu wired yet (Stage 10's Editor menu hasn't been run) — fall
+            // back to the simple "just free the mouse" behavior this key used to have.
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
+        /// <summary>(Stage 10) Forces a freshly-spawned (never-held) item straight into the
+        /// player's hand for a save restore — reuses CarryableItem.Interact's existing
+        /// ownership/physics/layer setup (safe to call directly since a restored item is, by
+        /// construction, never already held) instead of duplicating that logic here.</summary>
+        public void RestoreCarriedItem(CarryableItem item)
+        {
+            if (item == null || _carriedItem != null)
+            {
+                return;
+            }
+
+            item.Interact(this);
+            _carriedItem = item;
+        }
+
+        /// <summary>(Stage 10) Destroys whatever is currently held, for SaveManager's
+        /// pre-load "clear dynamic state" pass — a load is about to respawn its own
+        /// carried-item record (or none), so the previous session's held item (if any)
+        /// must not linger. Distinct from RequestDrop: dropping leaves the item in the
+        /// world, this removes it entirely, since it's about to be superseded by whatever
+        /// the save file says (or by nothing).</summary>
+        public void ClearCarriedItemForRestore()
+        {
+            if (_carriedItem == null)
+            {
+                return;
+            }
+
+            Destroy(_carriedItem.gameObject);
+            _carriedItem = null;
         }
 
         private void UpdateLookTarget()

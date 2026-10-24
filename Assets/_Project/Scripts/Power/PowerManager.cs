@@ -128,5 +128,17 @@ namespace Shiftworks.Power
             IsUpgradePurchased = true;
             return true;
         }
+
+        /// <summary>(Stage 10) Re-applies a previously-purchased upgrade on load — deliberately
+        /// bypasses TryPurchaseUpgrade entirely (no EconomyManager.TrySpend call), since the
+        /// player already paid for this in the saved session. UsedCapacityKw is intentionally
+        /// left untouched here: it is never read from the save file, only ever rebuilt by each
+        /// restored consumer's own TryRequestPower call, so it can never drift from what's
+        /// actually granted or get double-counted against an old saved number.</summary>
+        public void RestoreUpgradeState(bool upgradePurchased)
+        {
+            IsUpgradePurchased = upgradePurchased;
+            TotalCapacityKw = upgradePurchased ? upgradedCapacityKw : initialCapacityKw;
+        }
     }
 }

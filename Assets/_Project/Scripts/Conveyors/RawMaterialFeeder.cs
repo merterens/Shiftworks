@@ -20,6 +20,22 @@ namespace Shiftworks.Conveyors
 
         public int Stock => stock;
 
+        /// <summary>(Stage 10) Overwrites remaining stock for a save restore. Any in-flight
+        /// _pendingItem (an item already spawned from stock but not yet handed to the first
+        /// conveyor — sub-second in practice) is intentionally not separately saved: stock
+        /// itself is only ever decremented on a CONFIRMED hand-off, so it's still accurate
+        /// without it, and Update() simply spawns a fresh pending item next frame as usual —
+        /// no double-count, no loss.</summary>
+        public void RestoreStock(int restoredStock)
+        {
+            stock = Mathf.Max(0, restoredStock);
+            if (_pendingItem != null)
+            {
+                Destroy(_pendingItem.gameObject);
+                _pendingItem = null;
+            }
+        }
+
         public string InteractionPrompt =>
             feedItem != null ? $"Besleme İstasyonu: {feedItem.DisplayName} Stok {stock}" : "Besleme İstasyonu";
 

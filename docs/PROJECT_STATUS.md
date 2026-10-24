@@ -3,17 +3,23 @@
 _Son güncelleme: Aşama 1–6 tamamlandı ve test edildi. Aşama 7 (hazır üretim alanı satın alma —
 "Üretim Alanı B") **geliştirildi, kullanıcı oynanış testleri bekleniyor.** Aşama 8 (elektrik
 kapasitesi, makine güç tüketimi ve üretim verimliliği) **✅ tamamlandı — kullanıcı tarafından
-18/18 testle onaylandı.** Aşama 9 (yeni ürünler, montaj makinesi, çok aşamalı üretim)
-**geliştirildi — kullanıcı testleri bekleniyor.** Aşama 9 testi sırasında bulunan iki sorun
-düzeltildi: sipariş-kabul geri bildirimi eksikliği ("Aşama 9 Teslimat Hatası Düzeltmesi") ve
-ikinci üretimde yanıltıcı "Çıktı Hazır" metni ("Aşama 9 İkinci Üretim Takılması Düzeltmesi").
-Montaj makinesi akışı tekrar incelendi — **gerçek bir hata bulunamadı**, önceki metin
-düzeltmesi doğru çalışıyor. Editor-only F8 test parası özelliği (`DevelopmentCheats`) eklendi.
-Kullanıcı metin düzeltmesine rağmen aynı noktada takılmaya devam ettiğini bildirdiği için
-`PlayerInteractor.HandleMachineInteraction`'da **gerçek bir davranış değişikliği** yapıldı:
-Çıktı Hazır durumundaki bir makineye E'ye basıldığında elde bir şey varsa artık otomatik
-bırakılıp aynı tuş basışında çıktı alınıyor (bkz. "Aşama 9 — E Tuşu Otomatik Bırakma").
-**Kullanıcı henüz bunların hiçbirini test etmedi.**_
+18/18 testle onaylandı.** Aşama 9 (yeni ürünler, montaj makinesi, çok aşamalı üretim) **✅
+tamamlandı — kullanıcı tarafından 22/22 testle onaylandı** (yol boyunca bulunan iki geri
+bildirim/UX sorunu düzeltildi — bkz. "Aşama 9 Teslimat Hatası Düzeltmesi" ve "Aşama 9 — E
+Tuşu Otomatik Bırakma"; `MachineController`/`OrderManager`/`PackingStation`/`ShippingZone` iş
+mantığının kendisinde hiçbir gerçek hata bulunmadı). Aşama 10 (kayıt/yükleme sistemi)
+**geliştirildi — kullanıcı testleri bekleniyor.** Kullanıcı Escape'e bastığında menünün hiç
+açılmayıp sadece imlecin serbest kaldığını bildirdi — kök neden bulundu ve düzeltildi:
+`FirstPersonController` ve `PlayerInteractor` aynı Escape tuşuna bağımsız tepki veriyordu,
+çalışma sırasına göre menü bazen hiç açılmıyordu (bkz. "Bilinen Teknik Riskler"deki ÇÖZÜLDÜ
+notu). Kullanıcı bu düzeltmeyi test etmeden Aşama 10'u 30/30 testle onaylı kabul etti ve
+Aşama 11'i ("gerçek host-authoritative 2 oyunculu multiplayer co-op") talep etti. Aşama 11,
+kullanıcının isteğiyle **11A-11E** alt aşamalarına bölündü. **11A** (iki oyuncunun aynı
+fabrikaya bağlanıp hareket etmesi) geliştirildi ve **kullanıcı tarafından Unity'de test edilip
+onaylandı** (iki oyuncu bağlandı, farklı noktalarda doğdu, birbirinin hareketini gördü).
+Bunun üzerine **11B** (ekonomi + makine satın alma/yerleştirmenin host-authoritative hale
+gelmesi) **geliştirildi — kullanıcı testleri bekleniyor.** Ayrıntılar "Aşama 11A Mimarisi" ve
+"Aşama 11B Mimarisi" bölümlerinde._
 
 ⚠️ **Düzeltme**: Bu dosya daha önce iki oyunculu multiplayer teknik prototipinin "kullanıcı
 tarafından başarıyla test edildiğini" söylüyordu. Bu **yanlıştı** — kullanıcı, test ekranında
@@ -34,12 +40,17 @@ neden araştırması ve adım adım test talimatı aşağıda, "Multiplayer Test
 | — | İki oyunculu multiplayer teknik prototipi (Aşama 6 civarı, erken doğrulama) | 🛠️ **Geliştirildi — kullanıcı testi bekleniyor (düzeltme: önceki "başarılı" kaydı yanlıştı)** |
 | 7 | Fabrika genişletme — hazır üretim alanı satın alma ("Üretim Alanı B") | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
 | 8 | Elektrik kapasitesi, makine güç tüketimi ve üretim verimliliği | ✅ **Tamamlandı (18/18 kullanıcı testi)** |
-| 9 | Yeni ürünler, makineler ve çok aşamalı üretim (montaj makinesi) | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
+| 9 | Yeni ürünler, makineler ve çok aşamalı üretim (montaj makinesi) | ✅ **Tamamlandı (22/22 kullanıcı testi)** |
+| 10 | Kayıt / yükleme sistemi (save/load) | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
+| 11A | Gerçek multiplayer co-op — bağlantı + hareket (host-authoritative hedefine ilk adım) | ✅ **Kullanıcı tarafından test edildi ve onaylandı** |
+| 11B | Ekonomi + makine satın alma/yerleştirme — host-authoritative | 🛠️ **Geliştirildi — kullanıcı testleri bekleniyor** |
 
 Kullanıcı tarafından onaylanan test sonuçları: Aşama 1 (7/7), Aşama 2 (4/4 + hız/kaybolma hata
 düzeltmesi), Aşama 3 (11/11), Aşama 4 (11/11), Aşama 5 (ilk uygulama + 9/9 hata düzeltme testi),
 Aşama 6 (8/8, yerleştirme zemin-çakışma hata düzeltmesi dahil), **Aşama 8 (18/18 — elektrik
-kapasitesi, güç tahsisi, yükseltme, üretim istatistikleri)**. **Multiplayer teknik prototipi
+kapasitesi, güç tahsisi, yükseltme, üretim istatistikleri)**, **Aşama 9 (22/22 — montaj
+makinesi, çok aşamalı üretim, ikinci sipariş/mağaza, sipariş-kabul ve E-tuşu UX
+düzeltmeleri dahil)**. **Multiplayer teknik prototipi
 henüz kullanıcı tarafından test edilemedi** (bkz. düzeltme notu yukarıda ve "Multiplayer Test
 Talimatları" bölümü) — bir `NetworkManager` transport-bağlama hatası Aşama 6 civarında bulunup
 düzeltilmişti, ama bu kod/sahne seviyesinde bir düzeltmeydi; iki oyuncunun gerçekten bağlanıp
@@ -55,8 +66,26 @@ entegrasyonu Aşama 18'e aittir.
 
 ## Yeni Oturum İçin Devam Notları
 
-**000. En son geliştirme (bu oturum — Aşama 9: Yeni Ürünler, Montaj Makinesi, Çok Aşamalı
-Üretim)**: Aşama 8, kullanıcı tarafından **18/18 testle onaylandı** (✅ tamamlandı). Mimari
+**0000. En son geliştirme (bu oturum — Aşama 10: Kayıt ve Yükleme Sistemi)**: Aşama 9,
+kullanıcı tarafından **22/22 testle onaylandı** (✅ tamamlandı). Yeni `Shiftworks.SaveSystem`
+namespace'i: `SaveManager` (tek yetkili orkestratör — her sistemin KENDİ `Capture*`/`Restore*`
+uç noktalarını çağırır, hiçbir özel alana doğrudan dokunmaz), `SaveGameData` (JSON'a giden düz
+veri sınıfları, hiçbir Unity nesne referansı yok), `SaveCatalog` (ID↔asset çözümleyici —
+`ItemDefinition.ItemId`'yi, diğerleri için asset dosya adını kullanıyor, hiçbir sınıfa yeni ID
+alanı eklenmedi), `SaveFileHandler` (geçici dosya + yedekle güvenli JSON I/O,
+`Application.persistentDataPath/shiftworks_save.json`). `MachineController`,
+`ConveyorSegment`, `OutputStorage`, `RawMaterialFeeder`, `OrderManager`, `PowerManager`,
+`FactoryExpansionManager`, `EconomyManager`, `ProductionStatsTracker`, `PlayerInteractor`,
+`FirstPersonController`, `MachinePlacementController` her biri küçük, tek yetkilisini koruyan
+`Capture*`/`Restore*` uç noktaları kazandı (ayrıntı "Aşama 10 Mimarisi" bölümünde). Yeni
+`SaveLoadMenuUI` (Escape ile açılıyor, `IsInputSuspended` sayesinde diğer panellerle
+çakışmıyor). `ShiftworksSaveSetup.cs` (Editor, menü **28**). **Henüz Unity Editor'de açılıp
+menü çalıştırılmadı / Play Mode'da test edilmedi.** Desteklenmeyen/basitleştirilen durumlar
+için "Aşama 10 — Bilinmeyen/Desteklenmeyen Durumlar" bölümüne bakın (özellikle: konveyör
+üzerindeki ürün tam ara pozisyonunu değil, segment başlangıcını koruyor).
+
+**000. Önceki oturum (Aşama 9: Yeni Ürünler, Montaj Makinesi, Çok Aşamalı
+Üretim, ✅ 22/22 ile onaylandı)**: Aşama 8, kullanıcı tarafından **18/18 testle onaylandı**. Mimari
 inceleme sonucu çok önemli bir bulgu: `OrderManager`, `PackingStation`, `ShippingZone`,
 `ShipmentPackage`, `ConveyorSegment` **zaten tamamen veri-odaklı ve çoklu ürün/sipariş türünü
 destekliyordu** — sıfır kod değişikliği gerekti. Tek gerçek genelleme:
@@ -461,7 +490,7 @@ sadece bu ayrı, minimal test sahnesinde yaşayacak.
    hiçbir panelin birbirine karışmadığını (aynı anda iki panel açılmadığını, Escape'in
    sadece açık paneli kapattığını) doğrulayın.
 
-## Aşama 9 Test Talimatları
+## Aşama 9 Test Talimatları (✅ kullanıcı tarafından 22/22 ile tamamlandı)
 
 0. **(Yeni — teslimat hatası düzeltmesi)** Menüden **`26. Fix Order Board Accept Feedback`**
    çalıştırın (22-25 zaten çalıştırılmışsa sadece bunu çalıştırmanız yeterli). Bu, her iki
@@ -598,6 +627,346 @@ zaman "bu makineyle ilgilen" anlamına gelmesini sağlıyor. `GetPromptFor` metn
 güncellendi: "E - Elinizdekini Bırak ve X Al". Bu, **Stage 3'ün kesim makinesi dahil tüm
 `MachineController` örnekleri için geçerli** (tek bir sınıf, iki üretim sistemi yok ilkesi
 korundu).
+
+## Aşama 10 Mimarisi (Kayıt/Yükleme Sistemi)
+
+**Tek yetkili orkestratör ilkesi korundu**: `SaveManager` hiçbir sistemin özel alanına
+doğrudan dokunmuyor — her sistem kendi `Balance`/`State`/`StoredCount`/vb. üzerinde **kendisi**
+tek yetkili kalıyor, sadece artık ayrıca küçük bir `Capture*`/`Restore*` çifti sunuyor
+(`EconomyManager.RestoreBalance`, `PowerManager.RestoreUpgradeState`,
+`FactoryExpansionManager.RestoreUnlocked`, `OrderManager.RestoreOrderState`,
+`MachineController.CaptureProductionState`/`RestoreProductionState`,
+`ConveyorSegment.RestoreOccupant`/`ClearOccupant`, `OutputStorage.RestoreStoredCount`,
+`RawMaterialFeeder.RestoreStock`, `ProductionStatsTracker.RestoreTotal`,
+`PlayerInteractor.RestoreCarriedItem`/`ClearCarriedItemForRestore`,
+`FirstPersonController.SetLookRotation`). Bu `Restore*` metotlarının hiçbiri normal oyun
+akışından (E tuşu, satın alma, teslimat) erişilemez — yalnızca `SaveManager` çağırır, bu yüzden
+mevcut atomik-işlem/tek-yetkili-durum garantileri bozulmadı.
+
+**Sahne-dahili vs. oyuncu tarafından yaratılan ayrımı**: `MachineController.IsPlayerPlaced`
+(yeni alan) bunu ayırt ediyor — `false` olan (sahnedeki orijinal `CuttingMachine`) GameObject
+adıyla eşleştirilip yerinde durumu geri yükleniyor; `true` olan (mağazadan satın alınmış)
+`MachineDefinition` + pozisyon/rotasyondan **yeniden Instantiate** ediliyor, benzersiz bir
+`InstanceId` (GUID, `MachinePlacementController.ConfirmPlacement`'ta atanıyor) ile. Yükleme
+öncesi `SaveManager.ClearDynamicState()` tüm oyuncu-yerleştirmesi makineleri, tüm
+`ShipmentPackage`'ları ve tüm "izlenebilir" (ID'si `SaveCatalog`'da çözülen) serbest ürünleri
+yok ediyor — bu, oturum ortasında tekrar yükleme yapılsa bile **asla çoğaltma olmamasını**
+garanti ediyor (taze bir sahne açılışında zaten hiçbiri yok, bu adım orada no-op).
+
+**ID çözümleme**: `SaveCatalog`, `ItemDefinition` için zaten var olan `ItemId` alanını,
+`MachineDefinition`/`OrderDefinition`/`FactoryExpansionDefinition` için ise asset dosya adını
+(`.name`) kullanıyor — hiçbir veri sınıfına yeni bir ID alanı eklenmedi, sıfır şema değişikliği.
+
+**Elektrik kapasitesi tutarlılığı**: Kayıt dosyası `PowerManager.UsedCapacityKw`'yi **hiç
+tutmuyor** — sadece `upgradePurchased` (dolayısıyla `TotalCapacityKw`) saklanıyor. Kullanılan
+kapasite, her makine/konveyör kendi `Restore*` çağrısı sırasında `TryRequestPower`'ı tekrar
+çağırarak **sıfırdan yeniden hesaplanıyor** — eski bir sayı asla körü körüne yüklenmiyor, bu
+yüzden çift tahsis veya yanlış kapasite riski yapısal olarak yok.
+
+## Aşama 10'da Oluşturulan/Değiştirilen Dosyalar
+
+**Yeni**: `Assets/_Project/Scripts/SaveSystem/SaveGameData.cs`, `SaveManager.cs`,
+`SaveCatalog.cs`, `SaveFileHandler.cs`, `Assets/_Project/Scripts/UI/SaveLoadMenuUI.cs`,
+`Assets/_Project/Scripts/Editor/ShiftworksSaveSetup.cs` (menü 28).
+
+**Değiştirilen** (hepsi küçük, davranış koruyan ekler — mevcut hiçbir metot imzası/mantığı
+değişmedi): `MachineController.cs`, `ConveyorSegment.cs`, `OutputStorage.cs`,
+`RawMaterialFeeder.cs`, `OrderManager.cs`, `PowerManager.cs`, `FactoryExpansionManager.cs`,
+`EconomyManager.cs`, `ProductionStatsTracker.cs`, `PlayerInteractor.cs` (+ Escape artık
+`SaveLoadMenuUI`'yi açıyor), `FirstPersonController.cs` (+ `SetLookRotation`/`CurrentPitch`),
+`MachinePlacementController.cs` (+ yerleştirilen makineyi `MarkAsPlayerPlaced` ile işaretliyor).
+
+Unity içinde henüz çalıştırılmadı: `Shiftworks/Setup/28. Add Save System To Scene` — bunlar
+çalıştırılmadan `SaveCatalog`/`SaveManager`/menü sahnede **oluşmaz**; Escape'e basıldığında
+`saveLoadMenuUI == null` kontrolü sayesinde hiçbir şey olmaz (hata vermez, sadece menü
+açılmaz) — menü 28 koşulmadan önce bu beklenen, güvenli bir durumdur.
+
+## Aşama 10 — Desteklenmeyen / Basitleştirilmiş Durumlar (açıkça belirtiliyor)
+
+- **Konveyör üzerindeki ürün**: Tam ara pozisyonu (0..1 ilerleme) **korunmuyor** — kayıt sadece
+  "bu segment dolu mu, hangi ürün türü" bilgisini tutuyor, yüklemede ürün segmentin **başına**
+  yerleştiriliyor. Hiçbir ürün kaybolmuyor/çoğalmıyor, sadece görsel olarak o segmentin
+  başından yeniden hareket etmeye başlıyor. Kod tabanında zaten hiçbir yerde ara pozisyon kalıcı
+  tutulmuyordu (`ConveyorSegment` onu her an iki Transform + canlı bir float'tan hesaplıyor),
+  bu yüzden bunu kayıpsız şekilde birebir korumak yeni bir kalıcı durum türü icat etmek
+  anlamına gelirdi — kullanıcının isteğiyle (spec madde 9) bilinçli olarak basitleştirildi.
+- **Besleyicideki (RawMaterialFeeder) "uçuştaki" tek parça**: `stock` sayısı doğru korunuyor,
+  ama stok'tan düşülmeden önce zaten üretilmiş olabilecek tek bir "beklemedeki" parça
+  yüklemede yeniden üretiliyor (stok hiç etkilenmedi, bu yüzden çift sayım/kayıp yok) —
+  pratikte bu, bir saniyenin çok altında bir görsel farktır.
+- **Sahne süsleri (TestBox_1-4, orijinal 5 MetalSheet yığını)**: Bilinçli olarak **hiç
+  kaydedilmiyor** — `ItemDefinition`'ı olmayan (`CarryableItem.Definition == null`) nesneler
+  tamamen dokunulmadan bırakılıyor. `MetalSheet`/`CutMetalPart`/`AssembledComponent` gibi
+  gerçek `ItemDefinition`'a sahip **serbest** (elde değil, konveyörde değil, depoda değil)
+  örnekler ise normal şekilde kaydedilip yüklemede yeniden oluşturuluyor (yoksa yüklemede
+  "orijinal" MetalSheet yığınıyla kaydedilmiş MetalSheet'ler çakışıp çoğalırdı — bu yüzden
+  yükleme öncesi TÜM izlenebilir serbest ürünler önce yok ediliyor, sonra tam olarak kayıtta
+  ne varsa yeniden oluşturuluyor).
+- **Kayıt sürümü/migration**: Şimdilik tek sürüm (`saveVersion = 1`). Farklı bir sürüm numarası
+  okunursa yükleme **reddediliyor** ve kullanıcıya anlaşılır bir hata gösteriliyor (oyun
+  çökmez) — kapsamlı bir migration sistemi kasıtlı olarak yazılmadı (spec madde 2'nin izniyle).
+- **Bozuk/eksik JSON**: `SaveFileHandler.TryRead` her şeyi try/catch içinde yapıyor; bozuk bir
+  dosya veya eksik alanlar oyunun çökmesine değil, anlaşılır bir hata mesajına yol açıyor.
+  Yazma da geçici dosya + yedek deseniyle korunuyor (bkz. "Aşama 10 Mimarisi").
+- **Oturum ortasında yükleme** (sadece kapatıp-açma değil) kod seviyesinde destekleniyor
+  (`ClearDynamicState` bunun için var) ama **hiç test edilmedi** — asıl test odağı "kaydet →
+  Unity/Play Mode'u kapat-aç → yükle" senaryosu olmalı.
+
+## Aşama 10 Test Talimatları
+
+1. `WorkshopPrototype.unity` açıkken **`Shiftworks/Setup/28. Add Save System To Scene`**
+   çalıştırın. Console'da hata olmadığını kontrol edin.
+2. Play Mode'a girin, biraz oynayın: en az bir sipariş kabul edin, montaj/kesim makinesi
+   çalıştırın, biraz CutMetalPart/MetalSheet elinizde veya yerde bırakın, isterseniz Üretim
+   Alanı B'yi satın alın.
+3. **Escape**'e basın — "OYUN MENÜSÜ" paneli açılmalı (Kaydet/Yükle/Yeni Oyun/Devam Et).
+   Diğer panellerden (sipariş/mağaza/elektrik) biri açıkken Escape'in **o paneli kapattığını**,
+   bu menüyü **açmadığını** doğrulayın (çakışma olmamalı).
+4. **"Oyunu Kaydet"**e basın — yeşil bir "Oyun kaydedildi." mesajı görmelisiniz.
+   `%USERPROFILE%\AppData\LocalLow\<ŞirketAdı>\Shiftworks\shiftworks_save.json` dosyasının
+   oluştuğunu (Application.persistentDataPath) ve okunabilir JSON içerdiğini kontrol edin.
+5. Play Mode'u **durdurun** (tam bir "oyundan çık" simülasyonu için), tekrar **Play**'e basın
+   (taze bir sahne yüklemesi).
+6. Escape → **"Oyunu Yükle"**ye basın — yeşil "Oyun yüklendi." mesajı. Bakiyenizin,
+   siparişinizin, makinelerinizin, elinizdeki/yerdeki ürünlerin kaydettiğiniz anla **aynı**
+   olduğunu doğrulayın. Oyuncu konumunuzun/bakış yönünüzün de geri geldiğini kontrol edin.
+7. Elektrik panosuna gidip "Bağlı Ekipman"/"Kullanılan" kapasitenin **doğru** (çift sayılmamış)
+   olduğunu doğrulayın.
+8. **Regresyon**: kesim/montaj makineleri, konveyör hattı, mağaza, siparişler, F8 test parası
+   (yalnızca Editor'de), fabrika genişletmesi hâlâ normal çalışıyor mu kontrol edin.
+9. (İsteğe bağlı) "Yeni Oyun"a basıp kaydın silinmediğini, "Oyunu Yükle"nin hâlâ çalıştığını
+   doğrulayın.
+
+## Aşama 11A Mimarisi (Gerçek Multiplayer Co-op — Bağlantı + Hareket)
+
+Kapsam kullanıcı tarafından açıkça **11A'ya** daraltıldı: "iki oyuncunun aynı fabrikaya
+bağlanması ve hareket etmesi". Ekonomi/üretim/sipariş/elektrik/kayıt-yükleme'nin
+host-authoritative hale getirilmesi (11B-11E) **bu oturumda yapılmadı**, kullanıcının kendi
+isteğiyle 11A testi onaylanana kadar bekliyor.
+
+**Mevcut kod neden değişmeden yeniden kullanılabildi**: Aşama 6 civarında yapılan
+`MultiplayerPrototype.unity` teknik prototipi tam olarak bu amaç için (oyuncu hareketinin ağ
+senkronizasyonu) tasarlanmıştı — `NetworkPlayer.prefab` (CharacterController + var olan
+`FirstPersonController`, varsayılan **kapalı** + `NetworkObject` + owner-authoritative
+`NetworkTransform`), `NetworkPlayerSetup` (sadece sahip istemcide FPC/kamera/AudioListener'ı
+açar) ve `MultiplayerConnectionUI` (Host/Client/Disconnect paneli, 8s bağlantı zaman aşımı).
+Kullanıcının kendi isteği de bunu doğruluyor: "Oyuncu hareketinin ağ senkronizasyonu mevcut
+prototipten uyarlanabilir." 11A bu üç script'e **hiçbir değişiklik yapmadan** aynen yeniden
+kullandı — tek yeni script, iki oyuncunun aynı noktada doğup sıkışmaması için eklenen
+spawn-noktası dağıtımı.
+
+**Yeni sahne, tek-oyunculu oyun dokunulmadan**: `WorkshopPrototype.unity` hiç açılıp
+üzerine yazılmadı — yalnızca `AssetDatabase.CopyAsset` ile `WorkshopMultiplayer.unity` adlı
+bir **kopyası** oluşturuldu (menü 29), sonra o kopyanın üzerinde çalışıldı. Kopya, gerçek
+fabrikanın tüm zemin/duvar/makine/konveyör/sipariş panolarını **aynı üretim kodunu kullanarak**
+içeriyor (ayrı bir üretim kod tabanı yok — sadece sahne verisi kopyalandı). Kopyadan sadece
+tek-oyunculu `Player.prefab` örneği (`PlayerInteractor`/`FirstPersonController` içeren kök
+nesne) kaldırıldı, çünkü multiplayer'da oyuncular `NetworkPlayer.prefab`'tan dinamik olarak
+doğuyor. `PlayerStart` nesnesi (eski tek-oyunculu başlangıç noktası, (0,0,-6)) **silinmedi** —
+spawn noktası 1 olarak yeniden kullanıldı; 2m yanına yeni bir `PlayerSpawnPoint_2` eklendi.
+
+**Spawn noktası dağıtımı — `Shiftworks.Multiplayer.MultiplayerSpawnPoints`**: NGO'nun kendi
+`NetworkManager.ConnectionApprovalCallback`'ini kullanıyor (özel bir spawn RPC'si yok).
+`NetworkConfig.ConnectionApproval = true` yapıp callback'i kayıt ediyor; her onay isteğinde
+`spawnPoints` dizisinden sırayla bir nokta seçip `response.Position`/`Rotation` olarak
+ayarlıyor. NGO kaynağı doğrulandı: host'un **kendi yerel bağlantısı da** bu callback'ten
+geçiyor (`HostServerInitialize`), yani host spawn noktası 1'i, ilk bağlanan client spawn
+noktası 2'yi alıyor — iki oyuncu asla aynı yerde doğmuyor. Round-robin olduğu için 2'den
+fazla oyuncuya da (gelecekte) otomatik genişler.
+
+**Bağlantı paneli**: `MultiplayerConnectionUI`, önceki prototipteki ile birebir aynı script,
+yeni sahnede yeni bir `WorkshopConnectionUICanvas` üzerinde yeniden inşa edildi (Host
+Başlat/Client Bağlan/Bağlantıyı Kes + durum metni, varsayılan IP `127.0.0.1:7777`).
+
+**Build Settings**: `WorkshopMultiplayer.unity`, build listesinde **ilk ve etkin** sahne
+olarak ayarlandı (menü 30, `EnsureStartupScene`); `MultiplayerPrototype.unity`'nin build
+listesindeki girdisi **silinmedi**, sadece devre dışı bırakıldı — sahne dosyasının kendisi ve
+Build Settings'teki kaydı olduğu gibi duruyor, istenirse pencereden tekrar etkinleştirilebilir.
+
+## Aşama 11A'da Oluşturulan Dosyalar
+
+- Yeni: `Assets/_Project/Scripts/Multiplayer/MultiplayerSpawnPoints.cs` — host tarafı
+  `ConnectionApprovalCallback` ile spawn noktası dağıtımı.
+- Yeni: `Assets/_Project/Scripts/Editor/ShiftworksWorkshopMultiplayerSetup.cs` (menü 29-30 +
+  "Apply Workshop Multiplayer") — `WorkshopMultiplayer.unity`'yi `WorkshopPrototype.unity`'den
+  kopyalayıp tek-oyunculu `Player`'ı kaldırır (29), ardından NetworkManager/UnityTransport/
+  spawn noktaları/bağlantı panelini ekler ve Build Settings'i günceller (30). Her iki menü de
+  idempotent (ikinci çalıştırmada "zaten var, dokunulmadı" ile çıkar).
+- Yeni (henüz Unity'de oluşturulmadı — menü 29 ilk çalıştırıldığında ortaya çıkacak): sahne
+  asset'i `Assets/_Project/Scenes/WorkshopMultiplayer.unity`.
+- Değiştirilen: **Hiçbir mevcut script değiştirilmedi.** `FirstPersonController`,
+  `PlayerInteractor`, `NetworkPlayerSetup`, `MultiplayerConnectionUI`, `NetworkPlayer.prefab`,
+  `WorkshopPrototype.unity`, `MultiplayerPrototype.unity` bu aşamada **hiç dokunulmadı**
+  (Build Settings'teki etkin/devre dışı bayrağı dışında).
+
+## Aşama 11A — Desteklenmeyen / Bilinçli Sınırlar (açıkça belirtiliyor)
+
+- Ekonomi, siparişler, makineler, üretim, elektrik, fabrika genişletmesi, kayıt/yükleme —
+  **hiçbiri** henüz ağ üzerinden senkronize değil. `WorkshopMultiplayer.unity`'deki bu
+  sistemler her istemcide **ayrı ve bağımsız** çalışıyor (host'un ekonomisi client'ınkini
+  etkilemiyor). Bu, 11B (ekonomi/makine), 11C (eşya/üretim/konveyör) ve 11D (elektrik/
+  sipariş/paketleme/genişletme) kapsamına bilinçli olarak bırakıldı.
+- Hiçbir panel (sipariş panosu, makine mağazası, elektrik panosu, kayıt/yükleme menüsü)
+  multiplayer sahnesinde **açılamaz** — bunları açan `PlayerInteractor`, kaldırılan
+  tek-oyunculu `Player` nesnesinin üzerindeydi; `NetworkPlayer.prefab`'ta henüz yok (11C).
+- Oyuncuların birbirinin eşyasını/işini görmesi, taşıması veya etkilemesi yok — henüz sadece
+  hareket/kamera senkronize.
+- Bağlantı kopması/yeniden bağlanma/geç katılım (late-join) davranışı henüz özel olarak ele
+  alınmadı — NGO'nun varsayılan davranışına bırakıldı (11E kapsamı).
+- Bu script'ler gerçek bir Unity derlemesiyle **henüz test edilmedi** (Editor kapalıyken
+  yazıldı) — menü 29/30 ilk çalıştırıldığında olası derleme hatası riski var.
+
+## Aşama 11A Test Talimatları (tek bilgisayarda: Editor = Host, Windows Build = Client)
+
+1. Unity Editor'de **`Shiftworks/Setup/29. Create WorkshopMultiplayer Scene (Copy)`**
+   çalıştırın — Console'da hata olmadığını ve `Assets/_Project/Scenes/
+   WorkshopMultiplayer.unity` dosyasının oluştuğunu kontrol edin.
+2. **`Shiftworks/Setup/30. Add Networking To WorkshopMultiplayer Scene`** çalıştırın —
+   Console'da hata olmadığını kontrol edin. (Tek adımda ikisini birden yapan
+   "Apply Workshop Multiplayer (Scene + Networking)" menüsü de var.)
+3. **File > Build Settings** açıp `WorkshopMultiplayer` sahnesinin listede **ilk sırada ve
+   işaretli** olduğunu doğrulayın (bu menü otomatik ayarlar, ama kontrol edin).
+4. **Windows build alın** (File > Build Settings > Build) — bu .exe **Client** rolünü
+   oynayacak.
+5. Build tamamlandıktan sonra **Unity Editor'de** `WorkshopMultiplayer.unity` sahnesinin açık
+   olduğundan emin olup **Play**'e basın. Sol üstteki panelde **"Host Başlat"**a tıklayın —
+   durum "Host aktif (0 istemci bağlı)" olmalı, karakter fabrikada hareket edebilmeli.
+6. Az önce aldığınız **.exe'yi çalıştırın** (ayrı bir pencere açılacak). Aynı panelde IP
+   kutusunda `127.0.0.1` yazılı olduğunu doğrulayıp **"Client Bağlan"**a tıklayın.
+7. Her iki pencerede de durum **"Host aktif (1 istemci bağlı)"** / **"Client bağlı"**
+   olmalı. İki karakterin **farklı noktalarda** (üst üste binmeden, ~2m arayla) doğduğunu
+   doğrulayın.
+8. Her iki pencerede de kendi karakterinizi (WASD + mouse) hareket ettirip, **diğer
+   pencerede o hareketin göründüğünü** doğrulayın (owner-authoritative senkronizasyon).
+9. **Regresyon**: `WorkshopPrototype.unity`'yi açıp normal tek-oyunculu oyunun (hareket,
+   etkileşim, üretim, kayıt/yükleme) hâlâ sorunsuz çalıştığını doğrulayın —
+   `WorkshopMultiplayer.unity` sadece bir kopya, orijinal sahneye hiç dokunulmadı.
+10. (İsteğe bağlı) Client penceresinde **"Bağlantıyı Kes"**e basıp host tarafının
+    "Host aktif (0 istemci bağlı)"a döndüğünü doğrulayın.
+
+## Aşama 11B Mimarisi (Ekonomi + Makine Satın Alma/Yerleştirme — Host-Authoritative)
+
+Kapsam, kullanıcının 11B tanımına göre ikiyle sınırlı tutuldu: **ortak bakiye** ve **makine
+satın alma/yerleştirme**. Siparişler, elektrik ve fabrika genişletmesinin ekonomik etkileri
+(11D'nin kapsamı) hâlâ ağ üzerinden paylaşılmıyor — bkz. "Desteklenmeyen/Bilinçli Sınırlar".
+
+**Neden `EconomyManager`/`MachinePurchaseManager`'ın kendisi değişmedi**: Bu iki sınıfın
+`TrySpend`/`TryPurchase`/`TryConsumePending` metotları hâlâ TEK atomik yetkili — host-authoritative
+dönüşüm bunların NE YAPTIĞINI değiştirmedi, sadece KİMİN onları doğrudan çağırabileceğini
+sınırladı (yalnızca sunucu/host) ve diğer herkesin isteğini ona yönlendirdi.
+
+**`Shiftworks.Multiplayer.NetworkEconomyBridge`** (yeni, `WorkshopMultiplayer.unity`'ye
+özel — `WorkshopPrototype.unity`'de hiç yok, dolayısıyla tek oyunculu oyunda hiçbir kod yolu
+bundan geçmiyor):
+- `NetworkVariable<int>` ile bakiyeyi tek yönlü ayna gibi senkronize eder: sunucu tarafında
+  her `Update()`'te host'un kendi `EconomyManager.Balance`'ı ile karşılaştırılır, değiştiyse
+  `NetworkVariable` güncellenir. Bu, sadece bu köprüden geçen satın almaları değil, **host'un
+  yerel ekonomisini etkileyen her şeyi** (F8 test parası, sipariş ödülleri, elektrik/genişletme
+  satın alımları — hepsi hâlâ yerel) otomatik olarak yayınlar; host'un o anki gerçek bakiyesi
+  her zaman doğru şekilde herkese gider.
+- Her istemci, `NetworkVariable` değiştiğinde kendi YEREL `EconomyManager`'ına
+  `RestoreBalance(yeniDeğer)` çağırır (Aşama 10'un save/load'ta kullandığı AYNI giriş noktası)
+  — bu sayede `GameHUD`/`MachineShopPanelUI` **hiç değişmeden** doğru senkronize bakiyeyi
+  gösterir.
+- Bekleyen (satın alınmış ama henüz yerleştirilmemiş) makine sayıları da aynı mantıkla
+  `NetworkList<int>` ile senkronize edilir — `SaveCatalog.AllMachines` sırasına göre
+  indekslenir (Aşama 10'un kataloğu yeniden kullanıldı, ikinci bir makine listesi
+  oluşturulmadı). Bu havuz **oyuncuya özel değil, paylaşılan** — biri satın alırsa, başka bir
+  oyuncu gidip yerleştirebilir (paylaşılan şirket cüzdanıyla tutarlı tasarım kararı).
+- Satın alma/yerleştirme isteği: **host** için `RequestPurchase`/`RequestPlacement` senkron
+  çalışır (tek oyunculu ile birebir aynı davranış). **Uzak istemci** için bir `ServerRpc` host'a
+  gider, host AYNI `TryPurchase`/`TryConsumePending` çağrısını kendi yerel nesneleri üzerinde
+  yapar, sonra sadece o isteği gönderen istemciye hedefli bir `ClientRpc` ile sonucu
+  (başarılı/yetersiz bakiye/bekleyen kalmadı) bildirir.
+- Yerleştirilen makine `NetworkObject.Spawn()` ile ağa açılır (yalnızca bu — `NetworkTransform`
+  eklenmedi, çünkü makineler yerleştirildikten sonra hareket etmiyor; NGO'nun kendi spawn
+  mesajı başlangıç pozisyon/rotasyonunu zaten taşıyor — kurulu paket kaynağından doğrulandı:
+  `NetworkObject.cs`'teki `SceneObject` struct'ı `Position`/`Rotation`/`Scale` alanlarını
+  spawn mesajının kendisine gömüyor). Bu sayede host OLMAYAN bir oyuncunun satın aldığı makine
+  de **herkesin ekranında aynı yerde** belirir.
+- `CuttingMachine.prefab`/`AssemblyMachine.prefab`'a eklenen `NetworkObject` bileşeni, bu
+  prefab'ların `WorkshopPrototype.unity`'deki MEVCUT sahne-içi örneklerine de otomatik
+  yayılır (Unity prefab mirası) — kurulu Netcode paket kaynağından doğrulandı:
+  `NetworkObject.Awake()`/`OnDestroy()` hiçbir `NetworkManager` yokken güvenle no-op çalışıyor,
+  dolayısıyla tek oyunculu sahnede hiçbir risk yok.
+
+**NetworkPlayer.prefab'a eklenen etkileşim**: `PlayerInteractor` + `MachinePlacementController`
+artık NetworkPlayer.prefab'ta da var — ÖNCEDEN tamamen eksikti ("Carry/interact/production
+systems are intentionally not part of this prototype" notuyla). Her ikisi de kendi kamerası/
+`HoldPoint`'i/`InteractionPromptCanvas`'ı ile tamamen **kendi içinde** (prefab-local), tıpkı
+tek oyunculu `Player.prefab`'ın kendi kopyaları gibi — hiçbir sahne referansı gerekmediği için
+`NetworkPlayerSetup`'a yeni bir çalışma-zamanı kablolama adımı eklenmedi, sadece
+`FirstPersonController` ile AYNI "sadece sahip için etkinleştir" deseni uygulandı (`GetComponent`
+ile bulunup `enabled = isLocal` yapılıyor). `saveLoadMenuUI` kasıtlı olarak kablosuz bırakıldı
+— Escape'e basınca `PlayerInteractor`'ın zaten var olan güvenli fallback'i ("menü yoksa sadece
+imleci serbest bırak") devreye giriyor; Aşama 11E'ye kadar bu böyle kalacak.
+
+## Aşama 11B'de Oluşturulan/Değiştirilen Dosyalar
+
+- Yeni: `Assets/_Project/Scripts/Multiplayer/NetworkEconomyBridge.cs`.
+- Yeni: `Assets/_Project/Scripts/Editor/ShiftworksMultiplayerEconomySetup.cs` (menü **31**:
+  NetworkPlayer.prefab'a etkileşim ekler; menü **32**: makine prefab'larına `NetworkObject`
+  ekler + `NetworkPrefabsList` oluşturur + köprüyü sahneye ekler; + "Apply Multiplayer
+  Economy" birleşik menüsü).
+- Değiştirilen (küçük, additive): `SaveCatalog.cs` (`AllMachines` erişimcisi),
+  `MachinePurchaseManager.cs` (`RestorePendingCount`), `MachineShopPanelUI.cs` (`OnBuyClicked`
+  köprü varsa onu kullanır), `MachinePlacementController.cs` (`ConfirmPlacement` köprü varsa
+  onu kullanır + yanıt beklerken çift-tıklama koruması), `NetworkPlayerSetup.cs`
+  (`PlayerInteractor`/`MachinePlacementController`'ı sahip için etkinleştirir).
+- Değiştirilen prefab'lar: `NetworkPlayer.prefab` (etkileşim eklendi),
+  `CuttingMachine.prefab`/`AssemblyMachine.prefab` (`NetworkObject` eklendi — tek oyunculu
+  sahnedeki örnekleri de otomatik etkiler, yukarıda açıklanan nedenle risksiz).
+- **Hiç dokunulmayanlar**: `EconomyManager.cs`, `MachinePurchaseManager.TryPurchase/
+  TryConsumePending`, `MachineShopTerminal.cs`, `WorkshopPrototype.unity`, `Player.prefab`,
+  `MultiplayerPrototype.unity`.
+
+## Aşama 11B — Desteklenmeyen / Bilinçli Sınırlar (açıkça belirtiliyor)
+
+- Siparişler, elektrik faturaları/yükseltmeleri, fabrika genişletmesi satın alımları hâlâ
+  **ağ üzerinden paylaşılmıyor** — her istemcide yerel ve bağımsız. Bu kalemlerden biri
+  host'un bakiyesini değiştirirse, bu değişiklik senkronize balance'a yansır (Update polling
+  sayesinde), AMA aynı anda bir istemcinin KENDİ yerel-only kazancı (örn. tek başına
+  tamamladığı bir sipariş) bir sonraki senkronizasyonda host'un bakiyesiyle **ezilebilir** —
+  bu, 11B'nin bilinçli sınırının doğal bir sonucu. **Test ederken bunu karıştırmamak için**:
+  11B testinde SADECE makine satın alma/yerleştirmeyi test edin, siparişleri test etmeyin
+  (siparişler 11D'de ağ üzerinden paylaşılacak).
+- Yerleştirilen makinenin KENDİSİ (pozisyonu) herkese görünür ama **üretim durumu**
+  (reçete ilerlemesi, arabellekteki girdi, çıktı hazır mı) **senkronize değil** — her
+  istemci bu makineyi kendi yerel/bağımsız mantığıyla işletiyor. Aşama 11C'nin kapsamı.
+- Eşya taşıma (G ile alma/bırakma/fırlatma) artık her oyuncunun KENDİ ekranında çalışıyor
+  (çünkü `PlayerInteractor` artık NetworkPlayer'da var) ama **diğer oyunculara görünmüyor**
+  — taşınan eşyanın kendisi henüz bir `NetworkObject` değil. Aşama 11C'nin kapsamı.
+- Bağlantı kopması sırasında bir isteğin yanıtı hiç gelmeyebilir (`_waitingForNetworkResult`/
+  `_pendingPurchaseCallback` sonsuza kadar beklemede kalır) — bu durumda ilgili panel/yerleştirme
+  modu manuel olarak kapatılmalı (Escape). Otomatik zaman aşımı eklenmedi (11B kapsamında
+  gerekli görülmedi, MultiplayerConnectionUI'ın kendi 8s bağlantı zaman aşımı ayrı bir
+  mekanizma).
+- Bu script'ler gerçek bir Unity derlemesiyle **henüz test edilmedi**.
+
+## Aşama 11B Test Talimatları (tek bilgisayarda: Editor = Host, Windows Build = Client)
+
+1. Önce **11A'nın kurulumu** tamam olmalı (menü 29-30 çalıştırılmış, `WorkshopMultiplayer.unity`
+   var). Şimdi sırayla **`Shiftworks/Setup/31. Add Interaction To NetworkPlayer Prefab`** ve
+   **`32. Add Network Economy Bridge To WorkshopMultiplayer Scene`** çalıştırın (veya
+   "Apply Multiplayer Economy" birleşik menüsü). Console'da hata olmadığını kontrol edin.
+2. Yeni bir **Windows build** alın (NetworkPlayer.prefab ve makine prefab'ları değişti).
+3. Editor'de `WorkshopMultiplayer.unity` açıkken Play'e basıp **Host Başlat**. Build'i açıp
+   **Client Bağlan**.
+4. **Host tarafında**: bir makine mağazası terminaline (E) gidin, bir makine satın alın
+   ("Satın Al") — bakiyenin düştüğünü görün. **Client tarafında da aynı anda bakiyenin
+   düştüğünü** doğrulayın (paylaşılan bakiye).
+5. **Client tarafında**: aynı veya başka bir terminalden makine satın alın — host tarafında
+   da bakiyenin düştüğünü doğrulayın. "Yerleştir"e basıp bir yere makineyi koyun.
+6. **Host tarafında, aynı anda, o makinenin client'ın yerleştirdiği konumda belirdiğini**
+   doğrulayın (host'un ekranında da görünmeli — NetworkObject.Spawn senkronizasyonu).
+7. Tersini de deneyin: host bir makine satın alıp yerleştirsin, client'ın ekranında da
+   belirdiğini doğrulayın.
+8. **Yetersiz bakiye testi**: bakiye yokken client'tan satın almaya çalışın — "Yetersiz
+   bakiye!" uyarısının client'ta göründüğünü, hiçbir tarafta para düşmediğini doğrulayın.
+9. **Regresyon**: `WorkshopPrototype.unity`'yi açıp tek-oyunculu makine satın alma/yerleştirmenin
+   hâlâ sorunsuz çalıştığını doğrulayın.
+10. (İsteğe bağlı) Eşya taşımanın (G) her oyuncunun kendi ekranında çalıştığını ama diğer
+    oyuncuya görünmediğini gözlemleyin — bu, belgelenen bilinçli sınır, hata değil.
 
 ## Bilinen Teknik Riskler
 - Aşama 1'den sonra hiçbir aşamada gerçek bir Unity batch-mode derleme testi yapılmadı (Unity
@@ -746,3 +1115,53 @@ korundu).
 - **(Yeni)** Hiçbir script gerçek Unity derlemesiyle test edilmedi (bu oturumun
   `DevelopmentCheats`/`ShiftworksDevToolsSetup` dahil) — önceki aşamalarla aynı sınırlama,
   kullanıcı Editor'e geçip Console'u kontrol etmeli.
+- **(Aşama 10, yeni)** Hiçbir kayıt/yükleme script'i gerçek Unity derlemesiyle test edilmedi —
+  bu, özellikle `SaveManager`'ın bu kadar çok sistemle etkileşen boyutu göz önüne alındığında,
+  önceki aşamalardan daha kritik bir doğrulama adımı. "Aşama 10 Test Talimatları" bölümündeki
+  adımların tam olarak uygulanması önemle önerilir.
+- **(Aşama 10, yeni)** Konveyör üzerindeki ürünün tam ara pozisyonu korunmuyor (segment başına
+  sıfırlanıyor) — bilinçli, belgelenmiş bir basitleştirme (spec'in izniyle), ürün kaybı/çoğalma
+  riski yok, sadece görsel bir sadeleştirme. Ayrıntı için "Aşama 10 — Desteklenmeyen/
+  Basitleştirilmiş Durumlar" bölümüne bakın.
+- **(Aşama 10, yeni)** Oturum ortasında (kapat-aç yapmadan, Play Mode hiç durmadan) tekrar
+  yükleme yapma senaryosu kod seviyesinde destekleniyor (`ClearDynamicState`) ama **hiç
+  denenmedi** — asıl doğrulanması gereken, istenen asıl senaryo olan "kaydet → oyundan çık →
+  yeniden aç → yükle" akışıdır.
+- **(Aşama 10, yeni)** `SaveCatalog`'un ID çözümlemesi `MachineDefinition`/`OrderDefinition`/
+  `FactoryExpansionDefinition` için asset'in Unity **adını** (`.name`, yani `.asset` dosya
+  adı) kullanıyor — bu asset'ler Editor'de yeniden adlandırılırsa (örn. "AssemblyOrder.asset"
+  → başka bir ad), **eski kayıt dosyaları o referansı çözemez hale gelir** (sessizce atlanır,
+  çökme olmaz, ama o veri kaybolur). Pratikte bu asset'ler kurulum araçlarınca sabit adlarla
+  oluşturuldu ve elle yeniden adlandırılmadığı sürece risk yok.
+- **(Aşama 10, ÇÖZÜLDÜ)** İlk sürümde `PlayerInteractor`'daki yeni Escape işleyicisi ile
+  `FirstPersonController`'ın kendi bağımsız "Escape imleci serbest bırakır" davranışı **aynı
+  tuşa bağımsız bağımsız tepki veriyordu** — bu, raporda yanlışlıkla "çakışma yaratmıyor"
+  olarak değerlendirilmişti. Gerçekte, `FirstPersonController.Update()`'in
+  `PlayerInteractor.Update()`'ten **önce** çalıştığı karelerde imleç FirstPersonController
+  tarafından hemen serbest bırakılıyor, bu yüzden `PlayerInteractor` kendi Escape kontrolüne
+  ulaştığında "imleç zaten kilitli değil" koruması yüzünden erken çıkıyor ve **menü hiç
+  açılmıyordu** — kullanıcı tam olarak bunu bildirdi ("Escape'e bastığımda sadece mouse
+  imleci geliyor"). Düzeltme: `FirstPersonController.HandleCursorToggle`'dan Escape dalı
+  tamamen kaldırıldı (artık yalnızca sol-tık ile yeniden kilitlemeyi yönetiyor);
+  `PlayerInteractor.HandleEscapeKey` artık Escape'in **tek** sahibi — menü varsa açıyor,
+  yoksa (Aşama 10 menüsü henüz çalıştırılmadıysa) eski "sadece imleci serbest bırak"
+  davranışına geri dönüyor. Artık iki bağımsız sistem aynı tuşa tepki vermiyor, çalışma
+  sırası riski ortadan kalktı.
+- **(Aşama 11A, yeni)** `MultiplayerSpawnPoints`'in `NetworkManager.ConnectionApprovalCallback`
+  kullanımı projenin kurulu Netcode for GameObjects 2.13.3 paketinin gerçek kaynak koduna
+  karşı doğrulandı (`Library/PackageCache/com.unity.netcode.gameobjects@.../Runtime/Core/
+  NetworkManager.cs`): `ConnectionApprovalCallback` `event` değil düz bir `Action<,>` property,
+  `+=`/`-=` tek-dinleyici senaryosunda güvenli; `ConnectionApprovalResponse.Position`/
+  `Rotation`/`CreatePlayerObject`/`Approved`/`Pending` alan adları ve `HostServerInitialize`'ın
+  host'un kendi yerel bağlantısı için de bu callback'i çağırdığı (host da bir spawn noktası
+  alır, ilk client farklı birini) doğrulandı. Derleme hatası riski düşük, ama **gerçek Unity
+  derlemesiyle** (bu script'ler Editor kapalıyken yazıldı) henüz test edilmedi.
+- **(Aşama 11A, yeni)** `WorkshopMultiplayer.unity`, `WorkshopPrototype.unity`'nin tam bir
+  kopyası olduğu için, Aşama 10'da zaten kurulmuş olan `SaveManager`/`SaveCatalog`/
+  `SaveLoadMenuUI` ve tüm üretim/sipariş/güç panelleri de kopyaya dahil oluyor. Bunların
+  hiçbiri 11A'da **çalışmaz hale gelmez** ama **tetiklenemez** hale gelir — çünkü onları açan
+  tek bileşen (`PlayerInteractor`, E/Escape tuşlarının tek sahibi) sadece tek-oyunculu
+  `Player.prefab`'ın üzerindeydi ve bu kopyada kaldırıldı; `NetworkPlayer.prefab`'ta henüz
+  `PlayerInteractor` yok (bu, Aşama 11C'nin kapsamı). Sonuç: HUD'daki bakiye/sipariş sayıları
+  her istemcide **yerel ve birbirinden bağımsız** görünür (host'un 500$'ı client'ın 500$'ı ile
+  aynı değişken değildir) — bu, 11A'nın bilinçli ve beklenen bir sınırı, hata değil.
